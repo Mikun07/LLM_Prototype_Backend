@@ -14,6 +14,7 @@ docs/versions/
 
 | Version | Date | Tier | Summary |
 |---|---|---|---|
+| [v1.2.0](v1/v1.2.0.md) | 2026-05-09 | Backend feature change | Provider error messages shortened; Anthropic credit errors handled; 503 detail tightened |
 | [v1.1.0](v1/v1.1.0.md) | 2026-05-09 | Backend feature change | HTTP status policy for analysis creation and provider availability |
 | [v1.0.0](v1/v1.0.0.md) | 2026-05-08 | Major baseline | First working FastAPI backend for upload, analysis, status polling, mock LLM, and tests |
 
@@ -35,8 +36,8 @@ docs/versions/
 
 ## Current State
 
-Current version: `v1.1.0`
+Current version: `v1.2.0`
 
 Active major baseline: `v1.0.0`
 
-Next expected release: `v1.2.0` for backend feature work or `v1.1.1` for a patch.
+Next expected release: `v1.3.0` for backend feature work or `v1.2.1` for a patch.
