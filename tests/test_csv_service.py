@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 from fastapi import HTTPException
 
 from app.services.csv_service import parse_csv_text
@@ -21,7 +20,9 @@ def test_parse_csv_text_detects_columns_and_rows() -> None:
 
 
 def test_parse_csv_text_requires_text_column() -> None:
-    with pytest.raises(HTTPException) as error:
+    try:
         parse_csv_text("id,domain\nREQ-1,Auth\n", "bad.csv", 24)
-
-    assert error.value.status_code == 422
+    except HTTPException as error:
+        assert error.status_code == 422
+    else:
+        raise AssertionError("Expected HTTPException for CSV without text column.")

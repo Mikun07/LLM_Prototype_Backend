@@ -10,10 +10,21 @@ API routes, Pydantic models, services, an in-memory run store, and testable pars
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /health` | Basic server health check |
-| `POST /api/upload` | Upload, validate, parse, and preview a CSV file |
-| `POST /api/analyse` | Start an analysis run and return a run ID |
-| `GET /api/status/{run_id}` | Poll progress and retrieve reports when complete |
+| `GET /health` | Basic server health check; returns `200 OK` when reachable |
+| `POST /api/upload` | Upload, validate, parse, and preview a CSV file; returns `200 OK` on success |
+| `POST /api/analyse` | Create an analysis run; returns `201 Created` with a `Location` header |
+| `GET /api/status/{run_id}` | Poll progress and retrieve reports; returns `200 OK` for known runs |
+
+## Status Handling
+
+| Status | Where it appears | Meaning |
+|---|---|---|
+| `200 OK` | Health, upload, status polling | The request succeeded |
+| `201 Created` | Analysis start | A new run was created and can be polled through the `Location` header |
+| `404 Not Found` | Status polling | The requested run ID does not exist |
+| `413 Payload Too Large` | Upload | The CSV file is larger than the configured limit |
+| `422 Unprocessable Entity` | Upload or analysis start | The request body or CSV content is invalid |
+| `503 Service Unavailable` | Analysis start | A selected live model provider is missing required API configuration |
 
 The API response shapes are designed to match the current React frontend contract in
 `Frontend/src/types/index.ts`.

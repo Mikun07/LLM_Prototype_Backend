@@ -41,6 +41,14 @@ def as_object_rows(rows: list[AmbiguityResult] | list[InconsistencyResult]) -> l
     return list(rows)
 
 
+def selected_pipeline_keys(request: AnalyseRequest) -> list[PipelineKey]:
+    return [
+        pipeline_key(model, smell_type)
+        for model in request.config.selectedModels
+        for smell_type in request.config.selectedSmellTypes
+    ]
+
+
 def progress(
     processed: int,
     total: int,
@@ -181,12 +189,18 @@ class AnalysisService:
             if claude_report is not None and chatgpt_report is not None
             else None
         )
+        current = await self._store.get(run_id)
+        selected_keys = selected_pipeline_keys(request)
+        has_pipeline_error = (
+            current is not None
+            and any(current.progress[key].status == "error" for key in selected_keys)
+        )
         await self._store.set_reports(
             run_id,
             claude_report=claude_report,
             chatgpt_report=chatgpt_report,
             comparison=comparison,
-            status="complete",
+            status="error" if has_pipeline_error else "complete",
         )
 
     def _report_for_model(

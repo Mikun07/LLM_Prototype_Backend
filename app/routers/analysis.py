@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 
+from app.config import Settings, get_settings
 from app.models import AnalyseRequest, RunStatusResponse, StartRunResponse
 from app.run_store import run_store
 from app.services.analysis_service import analysis_service
@@ -9,15 +10,40 @@ from app.services.analysis_service import analysis_service
 router = APIRouter(tags=["analysis"])
 
 
-@router.post("/analyse", response_model=StartRunResponse, status_code=status.HTTP_202_ACCEPTED)
-async def start_analysis(payload: AnalyseRequest) -> StartRunResponse:
+def unavailable_provider_messages(payload: AnalyseRequest, settings: Settings) -> list[str]:
+    if not settings.use_real_llm:
+        return []
+
+    messages: list[str] = []
+    if "claude" in payload.config.selectedModels and not settings.anthropic_api_key:
+        messages.append("Claude is selected but ANTHROPIC_API_KEY is not configured.")
+    if "chatgpt" in payload.config.selectedModels and not settings.openai_api_key:
+        messages.append("ChatGPT is selected but OPENAI_API_KEY is not configured.")
+
+    return messages
+
+
+@router.post("/analyse", response_model=StartRunResponse, status_code=status.HTTP_201_CREATED)
+async def start_analysis(payload: AnalyseRequest, response: Response) -> StartRunResponse:
     if not payload.requirements:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="At least one requirement is needed to start analysis.",
         )
 
+    provider_messages = unavailable_provider_messages(payload, get_settings())
+    if provider_messages:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "provider_unavailable",
+                "message": "One or more selected model providers are unavailable.",
+                "providers": provider_messages,
+            },
+        )
+
     run_id = await analysis_service.start_run(payload)
+    response.headers["Location"] = f"/api/status/{run_id}"
     return StartRunResponse(runId=run_id, status="running")
 
 

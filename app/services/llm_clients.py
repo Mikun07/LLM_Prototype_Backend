@@ -13,6 +13,101 @@ AMBIGUITY_SIGNALS = ("may", "should", "could", "fast", "easy", "quickly", "suppo
 INCONSISTENCY_SIGNALS = ("must not", "shall not", "never", "without authentication")
 
 
+class ProviderRequestError(RuntimeError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        provider: str,
+        status_code: int | None = None,
+        code: str | None = None,
+        retryable: bool = True,
+    ) -> None:
+        super().__init__(message)
+        self.provider = provider
+        self.status_code = status_code
+        self.code = code
+        self.retryable = retryable
+
+
+def provider_name(model: ModelName) -> str:
+    return "OpenAI" if model == "chatgpt" else "Anthropic"
+
+
+def extract_status_code(exc: Exception) -> int | None:
+    value = getattr(exc, "status_code", None)
+    return value if isinstance(value, int) else None
+
+
+def extract_error_body(exc: Exception) -> dict[str, object]:
+    body = getattr(exc, "body", None)
+    return body if isinstance(body, dict) else {}
+
+
+def extract_error_code(exc: Exception) -> str | None:
+    body = extract_error_body(exc)
+    nested_error = body.get("error")
+    if isinstance(nested_error, dict):
+        code = nested_error.get("code")
+        if isinstance(code, str):
+            return code
+
+    code = getattr(exc, "code", None)
+    return code if isinstance(code, str) else None
+
+
+def extract_error_message(exc: Exception) -> str:
+    body = extract_error_body(exc)
+    nested_error = body.get("error")
+    if isinstance(nested_error, dict):
+        message = nested_error.get("message")
+        if isinstance(message, str):
+            return message
+
+    return str(exc)
+
+
+def normalise_provider_error(model: ModelName, exc: Exception) -> ProviderRequestError:
+    provider = provider_name(model)
+    status_code = extract_status_code(exc)
+    code = extract_error_code(exc)
+    message = extract_error_message(exc)
+    text = f"{code or ''} {message}".lower()
+
+    if status_code == 429 and "insufficient_quota" in text:
+        return ProviderRequestError(
+            (
+                "OpenAI API quota is exhausted (429 insufficient_quota). "
+                "Check OpenAI Platform billing and usage, add API credits, or switch "
+                "USE_REAL_LLM=false to continue with mock analysis."
+            ),
+            provider=provider,
+            status_code=status_code,
+            code="insufficient_quota",
+            retryable=False,
+        )
+
+    if status_code == 429:
+        return ProviderRequestError(
+            (
+                f"{provider} rate limit was reached (429). Wait a moment and retry, "
+                "or reduce the selected models/smell types."
+            ),
+            provider=provider,
+            status_code=status_code,
+            code=code,
+            retryable=True,
+        )
+
+    return ProviderRequestError(
+        f"{provider} request failed: {message}",
+        provider=provider,
+        status_code=status_code,
+        code=code,
+        retryable=True,
+    )
+
+
 def _extract_requirement_from_prompt(prompt: PromptMessages) -> str:
     match = re.search(r"Requirement:\s*(.+?)\n\nRespond", prompt.user, flags=re.DOTALL)
     if match is None:
@@ -118,8 +213,17 @@ class LlmClient:
         for attempt in range(self._settings.llm_max_retries):
             try:
                 return await self.complete(model, prompt)
-            except Exception as exc:  # pragma: no cover - live API path
+            except ProviderRequestError as exc:
                 last_error = exc
+                if not exc.retryable:
+                    raise
+            except Exception as exc:
+                provider_error = normalise_provider_error(model, exc)
+                last_error = provider_error
+                if not provider_error.retryable:
+                    raise provider_error from exc
+
+            if attempt < self._settings.llm_max_retries - 1:
                 await asyncio.sleep(min(2**attempt, 8))
 
-        raise RuntimeError(f"LLM request failed after retries: {last_error}") from last_error
+        raise RuntimeError(str(last_error)) from last_error
