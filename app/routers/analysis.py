@@ -10,17 +10,17 @@ from app.services.analysis_service import analysis_service
 router = APIRouter(tags=["analysis"])
 
 
-def unavailable_provider_messages(payload: AnalyseRequest, settings: Settings) -> list[str]:
+def unavailable_providers(payload: AnalyseRequest, settings: Settings) -> list[str]:
     if not settings.use_real_llm:
         return []
 
-    messages: list[str] = []
+    providers: list[str] = []
     if "claude" in payload.config.selectedModels and not settings.anthropic_api_key:
-        messages.append("Claude is selected but ANTHROPIC_API_KEY is not configured.")
+        providers.append("Claude")
     if "chatgpt" in payload.config.selectedModels and not settings.openai_api_key:
-        messages.append("ChatGPT is selected but OPENAI_API_KEY is not configured.")
+        providers.append("ChatGPT")
 
-    return messages
+    return providers
 
 
 @router.post("/analyse", response_model=StartRunResponse, status_code=status.HTTP_201_CREATED)
@@ -31,14 +31,14 @@ async def start_analysis(payload: AnalyseRequest, response: Response) -> StartRu
             detail="At least one requirement is needed to start analysis.",
         )
 
-    provider_messages = unavailable_provider_messages(payload, get_settings())
-    if provider_messages:
+    providers = unavailable_providers(payload, get_settings())
+    if providers:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "code": "provider_unavailable",
-                "message": "One or more selected model providers are unavailable.",
-                "providers": provider_messages,
+                "message": "Selected AI provider unavailable.",
+                "providers": providers,
             },
         )
 

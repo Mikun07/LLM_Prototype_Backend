@@ -16,6 +16,19 @@ class OpenAiQuotaError(Exception):
     }
 
 
+class AnthropicCreditError(Exception):
+    status_code = 400
+    body = {
+        "error": {
+            "message": (
+                "Your credit balance is too low to access the Anthropic API. "
+                "Please go to Plans & Billing to upgrade or purchase credits."
+            ),
+            "type": "invalid_request_error",
+        },
+    }
+
+
 def settings_for_test() -> Settings:
     return Settings(
         use_real_llm=True,
@@ -47,6 +60,16 @@ class QuotaFailingClient(LlmClient):
         raise OpenAiQuotaError()
 
 
+class AnthropicCreditFailingClient(LlmClient):
+    def __init__(self) -> None:
+        super().__init__(settings_for_test())
+        self.calls = 0
+
+    async def complete(self, model: ModelName, prompt: PromptMessages) -> str:
+        self.calls += 1
+        raise AnthropicCreditError()
+
+
 async def test_openai_insufficient_quota_is_not_retried() -> None:
     client = QuotaFailingClient()
 
@@ -59,6 +82,25 @@ async def test_openai_insufficient_quota_is_not_retried() -> None:
         assert client.calls == 1
         assert error.status_code == 429
         assert error.code == "insufficient_quota"
-        assert "OpenAI API quota is exhausted" in str(error)
+        assert str(error) == "ChatGPT billing issue. Add credits or use mock mode."
     else:
         raise AssertionError("Expected ProviderRequestError for exhausted OpenAI quota.")
+
+
+async def test_anthropic_low_credit_error_is_short_and_not_retried() -> None:
+    client = AnthropicCreditFailingClient()
+
+    try:
+        await client.complete_with_retries(
+            "claude",
+            PromptMessages(system="system", user="user"),
+        )
+    except ProviderRequestError as error:
+        assert client.calls == 1
+        assert error.status_code == 400
+        assert error.code == "billing_error"
+        assert str(error) == "Claude billing issue. Add credits or use mock mode."
+        assert "credit balance" not in str(error).lower()
+        assert "plans & billing" not in str(error).lower()
+    else:
+        raise AssertionError("Expected ProviderRequestError for low Anthropic credits.")

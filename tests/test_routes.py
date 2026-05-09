@@ -137,4 +137,9 @@ def test_start_analysis_returns_503_when_provider_key_is_missing(
     )
 
     assert response.status_code == 503
-    assert response.json()["detail"]["code"] == "provider_unavailable"
+    detail = response.json()["detail"]
+    assert detail["code"] == "provider_unavailable"
+    assert detail["message"] == "Selected AI provider unavailable."
+    assert detail["providers"] == ["Claude"]
+    assert "API_KEY" not in str(detail)
+    assert "configured" not in str(detail).lower()

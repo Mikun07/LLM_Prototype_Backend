@@ -34,6 +34,10 @@ def provider_name(model: ModelName) -> str:
     return "OpenAI" if model == "chatgpt" else "Anthropic"
 
 
+def user_model_name(model: ModelName) -> str:
+    return "ChatGPT" if model == "chatgpt" else "Claude"
+
+
 def extract_status_code(exc: Exception) -> int | None:
     value = getattr(exc, "status_code", None)
     return value if isinstance(value, int) else None
@@ -69,30 +73,29 @@ def extract_error_message(exc: Exception) -> str:
 
 def normalise_provider_error(model: ModelName, exc: Exception) -> ProviderRequestError:
     provider = provider_name(model)
+    model_label = user_model_name(model)
     status_code = extract_status_code(exc)
     code = extract_error_code(exc)
     message = extract_error_message(exc)
     text = f"{code or ''} {message}".lower()
 
-    if status_code == 429 and "insufficient_quota" in text:
+    if (
+        "insufficient_quota" in text
+        or "credit balance" in text
+        or "purchase credits" in text
+        or "billing" in text
+    ):
         return ProviderRequestError(
-            (
-                "OpenAI API quota is exhausted (429 insufficient_quota). "
-                "Check OpenAI Platform billing and usage, add API credits, or switch "
-                "USE_REAL_LLM=false to continue with mock analysis."
-            ),
+            f"{model_label} billing issue. Add credits or use mock mode.",
             provider=provider,
             status_code=status_code,
-            code="insufficient_quota",
+            code=code or "billing_error",
             retryable=False,
         )
 
     if status_code == 429:
         return ProviderRequestError(
-            (
-                f"{provider} rate limit was reached (429). Wait a moment and retry, "
-                "or reduce the selected models/smell types."
-            ),
+            f"{model_label} limit reached. Try again soon.",
             provider=provider,
             status_code=status_code,
             code=code,
