@@ -6,8 +6,8 @@ released.
 The current backend version is:
 
 ```text
-documented version: v1.1.0
-stable Git tag:     v1.1.0 once this release is tagged
+documented version: v1.2.0
+stable Git tag:     v1.2.0 once this release is tagged
 active baseline:    v1.0.0
 ```
 

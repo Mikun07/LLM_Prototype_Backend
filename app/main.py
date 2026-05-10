@@ -12,7 +12,7 @@ settings = get_settings()
 app = FastAPI(
     title="ReqSmell Backend",
     description="FastAPI backend for GenAI-powered requirements smell detection.",
-    version="0.1.0",
+    version="1.2.0",
 )
 
 app.add_middleware(
