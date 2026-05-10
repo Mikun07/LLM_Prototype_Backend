@@ -23,7 +23,7 @@ COLUMN_ALIASES: dict[ColumnKey, tuple[str, ...]] = {
     ),
     "domain": ("domain", "area", "module"),
     "type": ("type", "requirement type", "requirement_type"),
-    "project": ("project", "system", "product", "project name", "project_name"),
+    "project": ("project", "system", "product", "project name", "project_name", "Group_id"),
 }
 
 

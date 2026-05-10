@@ -9,7 +9,7 @@ from app.models import RequirementRow
 PROMPT_VERSION = "1.0"
 
 AMBIGUITY_SYSTEM_MESSAGE = """
-You are an expert requirements quality analyst specialising in detecting defects in
+You are a professor and requirements quality analyst specialising in detecting defects in
 natural-language software requirements specifications. Your task is to analyse a single
 software requirement and determine whether it contains an ambiguity smell.
 
@@ -18,7 +18,7 @@ outside the JSON object.
 """.strip()
 
 INCONSISTENCY_SYSTEM_MESSAGE = """
-You are an expert requirements quality analyst specialising in detecting defects in
+You are professor and expert requirements quality analyst specialising in detecting defects in
 natural-language software requirements specifications. Your task is to analyse a set of
 requirements from the same system and identify any inconsistencies between them.
 

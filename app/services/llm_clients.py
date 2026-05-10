@@ -185,7 +185,7 @@ class LlmClient:
                 {"role": "user", "content": prompt.user},
             ],
             temperature=self._settings.llm_temperature,
-            max_tokens=self._settings.llm_max_tokens,
+            max_completion_tokens=self._settings.llm_max_tokens,
         )
         return response.choices[0].message.content or ""
 

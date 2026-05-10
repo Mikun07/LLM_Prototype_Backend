@@ -191,9 +191,8 @@ class AnalysisService:
         )
         current = await self._store.get(run_id)
         selected_keys = selected_pipeline_keys(request)
-        has_pipeline_error = (
-            current is not None
-            and any(current.progress[key].status == "error" for key in selected_keys)
+        has_pipeline_error = current is not None and any(
+            current.progress[key].status == "error" for key in selected_keys
         )
         await self._store.set_reports(
             run_id,
