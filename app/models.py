@@ -122,6 +122,7 @@ class InconsistencyResult(ApiModel):
     reqAText: str
     reqBText: str
     domain: str
+    project: str
     label: SmellLabel
     confidence: ConfidenceLevel
     explanation: str
