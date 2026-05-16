@@ -90,6 +90,7 @@ def group_requirements(
         if len(group_rows) < 2:
             continue
         groups.extend(chunked(group_rows, max(2, max_group_size)))
+        # groups.append(group_rows)
 
     return groups
 
@@ -331,12 +332,21 @@ class AnalysisService:
                 for pair in parsed.pairs
                 if (result := result_from_parsed_pair(pair, requirements_by_id)) is not None
             ]
-            if smell_pairs:
-                rows.extend(smell_pairs)
-            else:
-                rows.extend(
-                    clean_pair_result(first, second) for first, second in candidate_pairs(group)
-                )
+            # if smell_pairs:
+            #    rows.extend(smell_pairs)
+            # else:
+            #    rows.extend(
+            #       clean_pair_result(first, second) for first, second in candidate_pairs(group)
+            #  )
+
+            detected_keys = {tuple(sorted([row.reqAId, row.reqBId])) for row in smell_pairs}
+            # Add all detected inconsistency rows
+            rows.extend(smell_pairs)
+            # Add CLEAN rows for all remaining pairs
+            for first, second in candidate_pairs(group):
+                pair_key = tuple(sorted([first.id, second.id]))
+                if pair_key not in detected_keys:
+                    rows.append(clean_pair_result(first, second))
 
             await self._store.update_progress(run_id, key, progress(index, total, "running"))
 

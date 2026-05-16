@@ -49,20 +49,25 @@ IMPORTANT:
 - Never compare requirements from different projects
 - Requirements from different projects are independent and must not
   be treated as inconsistent
+- Compare EVERY requirement against all other requirements in the same project
+- Return ALL detected inconsistency pairs
 
-An inconsistency exists if two or more requirements contradict or conflict one another.
-
-Two or more requirements are inconsistent ONLY if satisfying one requirement necessarily
-violates another requirement.
+An inconsistency exists if two or more requirements:
+- directly contradict each other
+- impose conflicting behaviour
+- define incompatible rules
+- create mutually exclusive outcomes
+- prevent correct implementation of another requirement
 
 Do not report:
 - differences in wording
 - abstraction level differences
 - incompleteness
-- implementation assumptions
-as inconsistencies.
+- implementation assumptionsnas inconsistencies.
 
-Be conservative when identifying inconsistencies.
+Identify all reasonable logical contradictions and conflicting behaviours.
+
+If a contradiction is weak but still reasonably plausible, report it with LOW confidence instead of ignoring it.
 
 You must respond with valid JSON only.
 Do not include markdown, explanations outside JSON, or extra text.
@@ -169,7 +174,10 @@ IMPORTANT:
 - All requirements belong to the SAME project
 - Only compare requirements inside this project
 - Ignore contradictions between different projects
-- Be conservative when identifying inconsistencies
+- Compare EVERY requirement against all other requirements in this project
+- Identify all reasonable contradictions, conflicting behaviours,
+incompatible rules, and mutually exclusive requirements
+- Return ALL detected inconsistency pairs
 
 Requirements:
 {requirements_json}
@@ -181,6 +189,15 @@ Examples of inconsistencies:
 - Req A: "Users shall be automatically logged out after 5 minutes."
 - Req B: "Users shall remain logged in indefinitely."
 
+- Req A: "Only administrators shall delete users."
+- Req B: "All authenticated users shall be able to delete users."
+
+- Req A: "Orders shall be processed automatically."
+- Req B: "Orders shall require manual approval before processing."
+
+- Req A: "Users shall remain logged in for 30 days."
+- Req B: "Users shall be logged out after 5 minutes of inactivity."
+
 Examples of NOT inconsistencies:
 - Different wording describing the same behaviour
 - Different abstraction levels
@@ -188,12 +205,16 @@ Examples of NOT inconsistencies:
 - Requirements belonging to different projects
 
 Decision rules:
-- Report inconsistencies ONLY when requirements directly contradict
-  each other
+- Compare each requirement with every other requirement in the project
+- Report inconsistencies when requirements contradict,
+  conflict logically, or define incompatible behaviour
 - Different abstraction levels are NOT inconsistencies
 - Missing information is NOT inconsistency
 - Different wording alone is NOT inconsistency
 - Cross-project contradictions must be ignored
+
+If a contradiction is weak but still reasonably plausible,
+report it with LOW confidence instead of ignoring it.
 
 If NO inconsistencies are found, respond with:
 {{
