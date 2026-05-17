@@ -1,3 +1,5 @@
+"""LLM client wrappers for mock, OpenAI, and Anthropic completions."""
+
 from __future__ import annotations
 
 import asyncio
@@ -16,7 +18,7 @@ INCONSISTENCY_SIGNALS = ("must not", "shall not", "never", "without authenticati
 class ProviderRequestError(RuntimeError):
     """Normalised provider error with retry and status metadata."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         message: str,
         *,
@@ -187,7 +189,7 @@ class LlmClient:
         if not self._settings.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is missing.")
 
-        from openai import AsyncOpenAI
+        from openai import AsyncOpenAI  # pylint: disable=import-outside-toplevel
 
         client = AsyncOpenAI(api_key=self._settings.openai_api_key)
         response = await client.chat.completions.create(
@@ -205,8 +207,8 @@ class LlmClient:
         if not self._settings.anthropic_api_key:
             raise RuntimeError("ANTHROPIC_API_KEY is missing.")
 
-        from anthropic import AsyncAnthropic
-        from anthropic.types import TextBlock
+        from anthropic import AsyncAnthropic  # pylint: disable=import-outside-toplevel
+        from anthropic.types import TextBlock  # pylint: disable=import-outside-toplevel
 
         client = AsyncAnthropic(api_key=self._settings.anthropic_api_key)
         response = await client.messages.create(

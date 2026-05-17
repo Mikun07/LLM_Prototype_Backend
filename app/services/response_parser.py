@@ -1,3 +1,5 @@
+"""Parses raw LLM responses into structured ambiguity and inconsistency results."""
+
 from __future__ import annotations
 
 import json
@@ -117,7 +119,7 @@ def parse_ambiguity_response(raw: str) -> ParsedAmbiguity:
 
 
 def parse_inconsistency_response(raw: str) -> ParsedInconsistency:
-    """Parse a raw LLM inconsistency response into a ParsedInconsistency, falling back gracefully."""
+    """Parse a raw LLM inconsistency response into a ParsedInconsistency, with graceful fallback."""
     try:
         parsed = extract_json(raw)
         if not isinstance(parsed, dict):

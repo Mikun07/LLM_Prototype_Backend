@@ -1,3 +1,6 @@
+"""Tests for LLM client retry logic and provider error normalisation."""
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 from app.config import Settings

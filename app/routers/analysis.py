@@ -1,3 +1,5 @@
+"""API router for starting analysis runs and polling run status."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Response, status

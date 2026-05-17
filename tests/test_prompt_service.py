@@ -1,3 +1,5 @@
+"""Tests for the prompt builder functions."""
+
 from __future__ import annotations
 
 from app.models import RequirementRow

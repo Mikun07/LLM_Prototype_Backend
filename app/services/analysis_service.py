@@ -1,3 +1,5 @@
+"""Orchestrates model pipelines and persists analysis run progress."""
+
 from __future__ import annotations
 
 import asyncio
@@ -108,14 +110,9 @@ def candidate_pairs(
     """Return all unique ordered pairs from a requirement group for inconsistency checking."""
     pairs: list[tuple[RequirementRow, RequirementRow]] = []
 
-    for first_index in range(len(group)):
+    for first_index, first_row in enumerate(group):
         for second_index in range(first_index + 1, len(group)):
-            pairs.append(
-                (
-                    group[first_index],
-                    group[second_index],
-                )
-            )
+            pairs.append((first_row, group[second_index]))
 
     return pairs
 
@@ -165,7 +162,7 @@ def clean_pair_result(first: RequirementRow, second: RequirementRow) -> Inconsis
     )
 
 
-class AnalysisService:
+class AnalysisService:  # pylint: disable=too-few-public-methods
     """Coordinates model pipelines and persists analysis run progress."""
 
     def __init__(self, store: RunStore, llm_client: LlmClient | None = None) -> None:
@@ -194,7 +191,7 @@ class AnalysisService:
 
         return state
 
-    async def _execute_run(self, run_id: str, request: AnalyseRequest) -> None:
+    async def _execute_run(self, run_id: str, request: AnalyseRequest) -> None:  # pylint: disable=too-many-locals
         results: dict[ModelName, dict[SmellType, list[object]]] = {
             "claude": {"ambiguity": [], "inconsistency": []},
             "chatgpt": {"ambiguity": [], "inconsistency": []},
@@ -317,7 +314,7 @@ class AnalysisService:
         await self._store.update_progress(run_id, key, progress(total, total, "complete"))
         return rows
 
-    async def _run_inconsistency_pipeline(
+    async def _run_inconsistency_pipeline(  # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
         self,
         run_id: str,
         key: PipelineKey,

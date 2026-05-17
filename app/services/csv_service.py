@@ -1,3 +1,5 @@
+"""Parses and validates uploaded CSV requirements files."""
+
 from __future__ import annotations
 
 import csv
@@ -80,7 +82,7 @@ def has_csv_shape(file: UploadFile) -> bool:
     )
 
 
-def parse_csv_text(text: str, file_name: str, file_size: int) -> UploadResponse:
+def parse_csv_text(text: str, file_name: str, file_size: int) -> UploadResponse:  # pylint: disable=too-many-locals
     """Parse CSV text into an UploadResponse, raising HTTP 422 for invalid content."""
     reader = csv.DictReader(StringIO(text))
     headers = reader.fieldnames or []

@@ -1,3 +1,6 @@
+"""Integration tests for the FastAPI route handlers."""
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 from typing import Protocol
@@ -11,7 +14,7 @@ from app.routers import analysis as analysis_router
 client = TestClient(app)
 
 
-class MonkeyPatch(Protocol):
+class MonkeyPatch(Protocol):  # pylint: disable=too-few-public-methods
     """Subset of pytest MonkeyPatch used in route tests."""
 
     def setattr(
@@ -22,7 +25,6 @@ class MonkeyPatch(Protocol):
         raising: bool = True,
     ) -> None:
         """Patch an attribute on a target object for the duration of the test."""
-        ...
 
 
 def settings_for_test(*, use_real_llm: bool) -> Settings:
@@ -47,7 +49,7 @@ def settings_for_test(*, use_real_llm: bool) -> Settings:
     )
 
 
-class FakeAnalysisService:
+class FakeAnalysisService:  # pylint: disable=too-few-public-methods
     """Test double that returns a deterministic run id."""
 
     async def start_run(self, *_: object) -> str:

@@ -1,3 +1,5 @@
+"""Tests for the CSV upload and parsing service."""
+
 from __future__ import annotations
 
 from fastapi import HTTPException

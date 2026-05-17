@@ -1,3 +1,5 @@
+"""In-memory store for tracking analysis run state across async pipelines."""
+
 from __future__ import annotations
 
 import asyncio
@@ -63,7 +65,7 @@ class RunStore:
         async with self._lock:
             self._runs[run_id].progress[key] = progress
 
-    async def set_reports(
+    async def set_reports(  # pylint: disable=too-many-arguments
         self,
         run_id: str,
         *,

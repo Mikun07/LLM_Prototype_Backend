@@ -1,3 +1,5 @@
+"""Pydantic models, type aliases, and enumerations for the ReqSmell API."""
+
 from __future__ import annotations
 
 from typing import Literal

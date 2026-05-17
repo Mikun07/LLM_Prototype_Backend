@@ -1,3 +1,5 @@
+"""Builds model and comparison reports from analysis results."""
+
 from __future__ import annotations
 
 from collections import defaultdict

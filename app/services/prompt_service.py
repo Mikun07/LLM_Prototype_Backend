@@ -1,3 +1,5 @@
+"""Builds system and user prompt messages for LLM smell analysis."""
+
 from __future__ import annotations
 
 import json

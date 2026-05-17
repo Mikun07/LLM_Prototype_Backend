@@ -1,3 +1,5 @@
+"""Runtime configuration loaded from environment variables."""
+
 from __future__ import annotations
 
 import os
@@ -45,7 +47,7 @@ def _env_list(name: str, default: list[str]) -> list[str]:
 
 
 @dataclass(frozen=True)
-class Settings:
+class Settings:  # pylint: disable=too-many-instance-attributes
     """Runtime configuration loaded from environment variables."""
 
     use_real_llm: bool

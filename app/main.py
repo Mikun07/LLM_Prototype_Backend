@@ -1,3 +1,5 @@
+"""FastAPI application factory and middleware configuration."""
+
 from __future__ import annotations
 
 from fastapi import FastAPI
