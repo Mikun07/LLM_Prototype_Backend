@@ -90,12 +90,26 @@ def group_requirements(
         if len(group_rows) < 2:
             continue
         groups.extend(chunked(group_rows, max(2, max_group_size)))
+        # groups.append(group_rows)
 
     return groups
 
 
-def candidate_pairs(group: list[RequirementRow]) -> list[tuple[RequirementRow, RequirementRow]]:
-    return [(group[index], group[index + 1]) for index in range(len(group) - 1)]
+def candidate_pairs(
+    group: list[RequirementRow],
+) -> list[tuple[RequirementRow, RequirementRow]]:
+    pairs: list[tuple[RequirementRow, RequirementRow]] = []
+
+    for first_index in range(len(group)):
+        for second_index in range(first_index + 1, len(group)):
+            pairs.append(
+                (
+                    group[first_index],
+                    group[second_index],
+                )
+            )
+
+    return pairs
 
 
 def pair_lookup(rows: list[RequirementRow]) -> dict[str, RequirementRow]:
@@ -117,6 +131,7 @@ def result_from_parsed_pair(
         reqAText=first.text,
         reqBText=second.text,
         domain=first.domain,
+        project=first.project,
         label="SMELL" if parsed_pair.label != "consistent" else "CLEAN",
         confidence=parsed_pair.confidence,
         explanation=parsed_pair.explanation,
@@ -131,6 +146,7 @@ def clean_pair_result(first: RequirementRow, second: RequirementRow) -> Inconsis
         reqAText=first.text,
         reqBText=second.text,
         domain=first.domain,
+        project=first.project,
         label="CLEAN",
         confidence="LOW",
         explanation="No contradiction was detected for this candidate pair.",
@@ -300,8 +316,15 @@ class AnalysisService:
         total = len(groups)
         await self._store.update_progress(run_id, key, progress(0, total, "running"))
         rows: list[InconsistencyResult] = []
+
         for index, group in enumerate(groups, start=1):
-            prompt = build_inconsistency_prompt(group)
+            project_name = (
+                group[0].project.strip() if group and group[0].project else "Unknown Project"
+            )
+            prompt = build_inconsistency_prompt(
+                project_name,
+                group,
+            )
             raw = await self._llm_client.complete_with_retries(model, prompt)
             parsed = parse_inconsistency_response(raw)
             smell_pairs = [
@@ -309,12 +332,21 @@ class AnalysisService:
                 for pair in parsed.pairs
                 if (result := result_from_parsed_pair(pair, requirements_by_id)) is not None
             ]
-            if smell_pairs:
-                rows.extend(smell_pairs)
-            else:
-                rows.extend(
-                    clean_pair_result(first, second) for first, second in candidate_pairs(group)
-                )
+            # if smell_pairs:
+            #    rows.extend(smell_pairs)
+            # else:
+            #    rows.extend(
+            #       clean_pair_result(first, second) for first, second in candidate_pairs(group)
+            #  )
+
+            detected_keys = {tuple(sorted([row.reqAId, row.reqBId])) for row in smell_pairs}
+            # Add all detected inconsistency rows
+            rows.extend(smell_pairs)
+            # Add CLEAN rows for all remaining pairs
+            for first, second in candidate_pairs(group):
+                pair_key = tuple(sorted([first.id, second.id]))
+                if pair_key not in detected_keys:
+                    rows.append(clean_pair_result(first, second))
 
             await self._store.update_progress(run_id, key, progress(index, total, "running"))
 

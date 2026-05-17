@@ -6,24 +6,71 @@ from dataclasses import dataclass
 
 from app.models import RequirementRow
 
-PROMPT_VERSION = "1.0"
+PROMPT_VERSION = "2.1"
 
 AMBIGUITY_SYSTEM_MESSAGE = """
 You are a professor and requirements quality analyst specialising in detecting defects in
-natural-language software requirements specifications. Your task is to analyse a single
-software requirement and determine whether it contains an ambiguity smell.
+natural-language software requirements specifications.
 
-You must respond with valid JSON only. Do not include any text, explanation, or markdown
-outside the JSON object.
+Your task is to analyse a SINGLE software requirement and determine whether it contains a
+true ambiguity defect.
+
+A requirement is ambiguous ONLY if:
+- a competent analyst, designer, or developer could reasonably interpret the SAME statement
+  in two or more different ways,
+AND
+- those interpretations could lead to different implementations or behaviours.
+
+Do NOT classify a requirement as ambiguous merely because:
+- implementation details are omitted
+- the requirement is incomplete
+- technical details are unspecified
+- nonfunctional constraints are absent
+- assumptions must be made using normal domain knowledge
+
+Assume reasonable domain knowledge and standard software engineering conventions.
+
+Be conservative when labelling ambiguity.
+If the ambiguity is weak, speculative, or unlikely to affect implementation,
+classify it as "not_ambiguous".
+
+You must respond with valid JSON only.
+Do not include markdown, explanations outside JSON, or extra text.
 """.strip()
 
 INCONSISTENCY_SYSTEM_MESSAGE = """
-You are professor and expert requirements quality analyst specialising in detecting defects in
-natural-language software requirements specifications. Your task is to analyse a set of
-requirements from the same system and identify any inconsistencies between them.
+You are a professor and expert requirements quality analyst specialising in detecting defects
+in natural-language software requirements specifications.
 
-You must respond with valid JSON only. Do not include any text, explanation, or markdown
-outside the JSON object.
+Your task is to analyse software requirements and identify logical inconsistencies.
+
+IMPORTANT:
+- Only compare requirements belonging to the SAME project
+- Never compare requirements from different projects
+- Requirements from different projects are independent and must not
+  be treated as inconsistent
+- Compare EVERY requirement against all other requirements in the same project
+- Return ALL detected inconsistency pairs
+
+An inconsistency exists if two or more requirements:
+- directly contradict each other
+- impose conflicting behaviour
+- define incompatible rules
+- create mutually exclusive outcomes
+- prevent correct implementation of another requirement
+
+Do not report:
+- differences in wording
+- abstraction level differences
+- incompleteness
+- implementation assumptionsnas inconsistencies.
+
+Identify all reasonable logical contradictions and conflicting behaviours.
+
+If a contradiction is weak but still reasonably plausible, report it with LOW confidence instead of ignoring it.
+
+You must respond with valid JSON only.
+Do not include markdown, explanations outside JSON, or extra text.
 """.strip()
 
 
@@ -35,7 +82,12 @@ class PromptMessages:
 
 
 def sanitise_requirement_text(value: str) -> str:
-    without_control_chars = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", value)
+    without_control_chars = re.sub(
+        r"[\x00-\x08\x0b\x0c\x0e-\x1f]",
+        " ",
+        value,
+    )
+
     return re.sub(r"\s+", " ", without_control_chars).strip()
 
 
@@ -44,30 +96,58 @@ def build_ambiguity_prompt(requirement: RequirementRow) -> PromptMessages:
         sanitise_requirement_text(requirement.text),
         ensure_ascii=False,
     )
+
     user = f"""
 Analyse the following software requirement for ambiguity.
 
-A requirement is AMBIGUOUS if a requirements analyst who is familiar with the domain could
-interpret it in two or more ways, such that different designers or implementers could produce
-different designs or implementations. This includes lexical ambiguity, syntactic ambiguity,
-and unclear references.
+Examples of AMBIGUOUS requirements:
+- "The system shall load pages quickly."
+- "The interface should be user-friendly."
+- "The user may update records."
+- "The system shall notify the manager when necessary."
+
+Why ambiguous:
+- subjective wording
+- unclear conditions
+- optional behaviour
+- multiple reasonable interpretations
+
+Examples of NOT ambiguous requirements:
+- "The system shall export reports in PDF format."
+- "The ATM shall eject the card after 30 seconds."
+- "The application shall require email verification before login."
+- "The system shall store passwords using SHA-256 hashing."
 
 Requirement:
 {requirement_text}
+
+Decision rules:
+- Missing detail alone does NOT mean ambiguity
+- Incompleteness is NOT ambiguity
+- Use reasonable domain assumptions
+- Only classify as ambiguous if multiple reasonable interpretations
+  could produce different implementations
 
 Respond with this exact JSON structure and no other text:
 {{
   "label": "ambiguous" or "not_ambiguous",
   "confidence": "high" or "medium" or "low",
-  "explanation": "A clear explanation of why this requirement is or is not ambiguous.",
-  "suggestion": "A proposed reformulation that resolves the ambiguity. Empty string if clean."
+  "ambiguity_type": "lexical" or "syntactic" or "referential" or "semantic" or "none",
+  "explanation": "Clear explanation of the decision.",
+  "suggestion": "Rewrite that removes ambiguity. Empty string if not ambiguous."
 }}
 """.strip()
 
-    return PromptMessages(system=AMBIGUITY_SYSTEM_MESSAGE, user=user)
+    return PromptMessages(
+        system=AMBIGUITY_SYSTEM_MESSAGE,
+        user=user,
+    )
 
 
-def build_inconsistency_prompt(requirements: list[RequirementRow]) -> PromptMessages:
+def build_inconsistency_prompt(
+    project_name: str,
+    requirements: list[RequirementRow],
+) -> PromptMessages:
     payload = [
         {
             "id": requirement.id,
@@ -77,20 +157,64 @@ def build_inconsistency_prompt(requirements: list[RequirementRow]) -> PromptMess
         }
         for requirement in requirements
     ]
-    requirements_json = json.dumps(payload, ensure_ascii=False, indent=2)
+
+    requirements_json = json.dumps(
+        payload,
+        ensure_ascii=False,
+        indent=2,
+    )
+
     user = f"""
-Analyse the following set of software requirements for inconsistencies.
+Analyse the following software requirements for logical inconsistencies.
 
-Two or more requirements are INCONSISTENT if satisfying one requirement necessarily violates
-another. Their constraints directly contradict each other, making it impossible to satisfy
-all requirements simultaneously.
+Project:
+{project_name}
 
-Example of inconsistency:
-  Req A: "The system shall allow password reset without authentication."
-  Req B: "The system shall require authentication for all password changes."
+IMPORTANT:
+- All requirements belong to the SAME project
+- Only compare requirements inside this project
+- Ignore contradictions between different projects
+- Compare EVERY requirement against all other requirements in this project
+- Identify all reasonable contradictions, conflicting behaviours,
+incompatible rules, and mutually exclusive requirements
+- Return ALL detected inconsistency pairs
 
-Requirements from the same project and domain:
+Requirements:
 {requirements_json}
+
+Examples of inconsistencies:
+- Req A: "Password reset shall not require authentication."
+- Req B: "All password changes shall require authentication."
+
+- Req A: "Users shall be automatically logged out after 5 minutes."
+- Req B: "Users shall remain logged in indefinitely."
+
+- Req A: "Only administrators shall delete users."
+- Req B: "All authenticated users shall be able to delete users."
+
+- Req A: "Orders shall be processed automatically."
+- Req B: "Orders shall require manual approval before processing."
+
+- Req A: "Users shall remain logged in for 30 days."
+- Req B: "Users shall be logged out after 5 minutes of inactivity."
+
+Examples of NOT inconsistencies:
+- Different wording describing the same behaviour
+- Different abstraction levels
+- Missing implementation details
+- Requirements belonging to different projects
+
+Decision rules:
+- Compare each requirement with every other requirement in the project
+- Report inconsistencies when requirements contradict,
+  conflict logically, or define incompatible behaviour
+- Different abstraction levels are NOT inconsistencies
+- Missing information is NOT inconsistency
+- Different wording alone is NOT inconsistency
+- Cross-project contradictions must be ignored
+
+If a contradiction is weak but still reasonably plausible,
+report it with LOW confidence instead of ignoring it.
 
 If NO inconsistencies are found, respond with:
 {{
@@ -107,11 +231,14 @@ If inconsistencies ARE found, respond with:
       "req_b_id": "REQ-002",
       "label": "inconsistent",
       "confidence": "high" or "medium" or "low",
-      "explanation": "A clear explanation of the contradiction.",
-      "suggestion": "A proposed resolution."
+      "explanation": "Explanation of the contradiction.",
+      "suggestion": "Suggested resolution."
     }}
   ]
 }}
 """.strip()
 
-    return PromptMessages(system=INCONSISTENCY_SYSTEM_MESSAGE, user=user)
+    return PromptMessages(
+        system=INCONSISTENCY_SYSTEM_MESSAGE,
+        user=user,
+    )
