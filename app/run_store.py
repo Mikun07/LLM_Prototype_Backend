@@ -14,6 +14,7 @@ from app.models import (
 
 
 def empty_progress() -> dict[PipelineKey, PipelineProgress]:
+    """Return a fresh progress dict with all pipelines set to queued/zero."""
     return {
         key: PipelineProgress(
             percentage=0,
@@ -27,6 +28,8 @@ def empty_progress() -> dict[PipelineKey, PipelineProgress]:
 
 
 class RunStore:
+    """In-memory store for active and completed analysis runs."""
+
     def __init__(self) -> None:
         self._runs: dict[str, RunStatusResponse] = {}
         self._lock = asyncio.Lock()
@@ -36,6 +39,7 @@ class RunStore:
         run_id: str,
         progress: dict[PipelineKey, PipelineProgress] | None = None,
     ) -> None:
+        """Initialise a new run entry with the given ID and optional progress state."""
         async with self._lock:
             self._runs[run_id] = RunStatusResponse(
                 runId=run_id,
@@ -44,6 +48,7 @@ class RunStore:
             )
 
     async def get(self, run_id: str) -> RunStatusResponse | None:
+        """Return a deep copy of the run state, or None if the run does not exist."""
         async with self._lock:
             state = self._runs.get(run_id)
             return state.model_copy(deep=True) if state is not None else None
@@ -54,6 +59,7 @@ class RunStore:
         key: PipelineKey,
         progress: PipelineProgress,
     ) -> None:
+        """Update the progress entry for one pipeline within a run."""
         async with self._lock:
             self._runs[run_id].progress[key] = progress
 
@@ -66,6 +72,7 @@ class RunStore:
         comparison: ComparisonReport | None,
         status: RunStatus,
     ) -> None:
+        """Persist the final model reports and set the run status."""
         async with self._lock:
             state = self._runs[run_id]
             state.claudeReport = claude_report
@@ -74,6 +81,7 @@ class RunStore:
             state.status = status
 
     async def set_status(self, run_id: str, status: RunStatus) -> None:
+        """Update the top-level status of a run without touching reports."""
         async with self._lock:
             self._runs[run_id].status = status
 

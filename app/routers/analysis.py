@@ -11,6 +11,7 @@ router = APIRouter(tags=["analysis"])
 
 
 def unavailable_providers(payload: AnalyseRequest, settings: Settings) -> list[str]:
+    """Return provider names that are selected but lack a configured API key."""
     if not settings.use_real_llm:
         return []
 
@@ -25,6 +26,7 @@ def unavailable_providers(payload: AnalyseRequest, settings: Settings) -> list[s
 
 @router.post("/analyse", response_model=StartRunResponse, status_code=status.HTTP_201_CREATED)
 async def start_analysis(payload: AnalyseRequest, response: Response) -> StartRunResponse:
+    """Validate the analysis request and start a background pipeline run."""
     if not payload.requirements:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -49,6 +51,7 @@ async def start_analysis(payload: AnalyseRequest, response: Response) -> StartRu
 
 @router.get("/status/{run_id}", response_model=RunStatusResponse)
 async def get_run_status(run_id: str) -> RunStatusResponse:
+    """Return the current progress and reports for the given run ID."""
     state = await run_store.get(run_id)
     if state is None:
         raise HTTPException(

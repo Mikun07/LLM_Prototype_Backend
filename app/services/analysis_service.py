@@ -34,14 +34,17 @@ ALL_SMELL_TYPES: tuple[SmellType, ...] = ("ambiguity", "inconsistency")
 
 
 def confidence_for_parse_error() -> ConfidenceLevel:
+    """Return the confidence level assigned when an LLM response cannot be parsed."""
     return "LOW"
 
 
 def as_object_rows(rows: list[AmbiguityResult] | list[InconsistencyResult]) -> list[object]:
+    """Erase the typed list to a plain object list for uniform pipeline result storage."""
     return list(rows)
 
 
 def selected_pipeline_keys(request: AnalyseRequest) -> list[PipelineKey]:
+    """Return the pipeline keys matching the models and smell types chosen in the request."""
     return [
         pipeline_key(model, smell_type)
         for model in request.config.selectedModels
@@ -55,6 +58,7 @@ def progress(
     status: PipelineStatus,
     error: str | None = None,
 ) -> PipelineProgress:
+    """Build a PipelineProgress snapshot from processed/total counts and a status."""
     if total == 0 and status == "complete":
         percentage = 100
     else:
@@ -70,10 +74,12 @@ def progress(
 
 
 def normalise_group_key(row: RequirementRow) -> tuple[str, str]:
+    """Return a normalised (project, domain) grouping key for a requirement row."""
     return (row.project.strip() or "Default", row.domain.strip() or "General")
 
 
 def chunked(rows: list[RequirementRow], size: int) -> list[list[RequirementRow]]:
+    """Split a list of requirement rows into fixed-size chunks."""
     return [rows[index : index + size] for index in range(0, len(rows), size)]
 
 
@@ -81,6 +87,7 @@ def group_requirements(
     rows: list[RequirementRow],
     max_group_size: int,
 ) -> list[list[RequirementRow]]:
+    """Group requirements by project and domain, then chunk each group by max size."""
     grouped: dict[tuple[str, str], list[RequirementRow]] = defaultdict(list)
     for row in rows:
         grouped[normalise_group_key(row)].append(row)
@@ -98,6 +105,7 @@ def group_requirements(
 def candidate_pairs(
     group: list[RequirementRow],
 ) -> list[tuple[RequirementRow, RequirementRow]]:
+    """Return all unique ordered pairs from a requirement group for inconsistency checking."""
     pairs: list[tuple[RequirementRow, RequirementRow]] = []
 
     for first_index in range(len(group)):
@@ -113,6 +121,7 @@ def candidate_pairs(
 
 
 def pair_lookup(rows: list[RequirementRow]) -> dict[str, RequirementRow]:
+    """Build an ID-to-row index for fast requirement lookup during pair resolution."""
     return {row.id: row for row in rows}
 
 
@@ -120,6 +129,7 @@ def result_from_parsed_pair(
     parsed_pair: ParsedInconsistencyPair,
     requirements_by_id: dict[str, RequirementRow],
 ) -> InconsistencyResult | None:
+    """Convert a parsed LLM pair into an InconsistencyResult, or None if either ID is missing."""
     first = requirements_by_id.get(parsed_pair.req_a_id)
     second = requirements_by_id.get(parsed_pair.req_b_id)
     if first is None or second is None:
@@ -140,6 +150,7 @@ def result_from_parsed_pair(
 
 
 def clean_pair_result(first: RequirementRow, second: RequirementRow) -> InconsistencyResult:
+    """Build a CLEAN inconsistency result for a pair that the LLM did not flag."""
     return InconsistencyResult(
         reqAId=first.id,
         reqBId=second.id,
@@ -155,11 +166,14 @@ def clean_pair_result(first: RequirementRow, second: RequirementRow) -> Inconsis
 
 
 class AnalysisService:
+    """Coordinates model pipelines and persists analysis run progress."""
+
     def __init__(self, store: RunStore, llm_client: LlmClient | None = None) -> None:
         self._store = store
         self._llm_client = llm_client or LlmClient()
 
     async def start_run(self, request: AnalyseRequest) -> str:
+        """Create a run entry and launch the analysis pipelines in the background."""
         run_id = f"run_{uuid4().hex[:12]}"
         await self._store.create(run_id, self._initial_progress(request))
         asyncio.create_task(self._execute_run(run_id, request))
@@ -266,7 +280,7 @@ class AnalysisService:
                 request.config.maxGroupSize,
             )
             return model, smell_type, as_object_rows(inconsistency_rows)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             current = await self._store.get(run_id)
             total = current.progress[key].total if current is not None else 0
             await self._store.update_progress(run_id, key, progress(0, total, "error", str(exc)))

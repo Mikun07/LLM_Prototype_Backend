@@ -5,6 +5,7 @@ from app.services.prompt_service import build_ambiguity_prompt, build_inconsiste
 
 
 def test_ambiguity_prompt_requests_json() -> None:
+    """Verify that the ambiguity prompt instructs JSON-only output and embeds the requirement."""
     prompt = build_ambiguity_prompt(
         RequirementRow(id="REQ-1", text='The system may show "fast" results.'),
     )
@@ -15,6 +16,7 @@ def test_ambiguity_prompt_requests_json() -> None:
 
 
 def test_inconsistency_prompt_includes_no_result_shape() -> None:
+    """Verify that the inconsistency prompt includes the empty-pairs JSON template."""
     prompt = build_inconsistency_prompt(
         "Authentication Project",
         [

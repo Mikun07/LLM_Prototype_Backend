@@ -9,10 +9,15 @@ from app.routers.upload import router as upload_router
 
 settings = get_settings()
 
+#: API version exposed in the OpenAPI schema and /docs UI.
+#: Increment the minor version for backwards-compatible additions,
+#: the major version for breaking changes.
+APP_VERSION = "1.2.0"
+
 app = FastAPI(
     title="ReqSmell Backend",
     description="FastAPI backend for GenAI-powered requirements smell detection.",
-    version="1.2.0",
+    version=APP_VERSION,
 )
 
 app.add_middleware(
@@ -26,6 +31,7 @@ app.add_middleware(
 
 @app.get("/health", tags=["health"])
 async def health() -> dict[str, str]:
+    """Return a simple health-check response."""
     return {"status": "ok"}
 
 

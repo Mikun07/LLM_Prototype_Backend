@@ -12,16 +12,21 @@ client = TestClient(app)
 
 
 class MonkeyPatch(Protocol):
+    """Subset of pytest MonkeyPatch used in route tests."""
+
     def setattr(
         self,
         target: object,
         name: str,
         value: object,
         raising: bool = True,
-    ) -> None: ...
+    ) -> None:
+        """Patch an attribute on a target object for the duration of the test."""
+        ...
 
 
 def settings_for_test(*, use_real_llm: bool) -> Settings:
+    """Return a Settings object suitable for route tests with configurable LLM mode."""
     return Settings(
         use_real_llm=use_real_llm,
         anthropic_api_key=None,
@@ -43,11 +48,15 @@ def settings_for_test(*, use_real_llm: bool) -> Settings:
 
 
 class FakeAnalysisService:
-    async def start_run(self, payload: object) -> str:
+    """Test double that returns a deterministic run id."""
+
+    async def start_run(self, *_: object) -> str:
+        """Return a fixed run ID without actually starting any pipelines."""
         return "run_test123"
 
 
 def analyse_payload(*, selected_models: list[str]) -> dict[str, object]:
+    """Build a minimal analyse request payload for a given set of model names."""
     return {
         "fileName": "requirements.csv",
         "requirements": [
@@ -69,6 +78,7 @@ def analyse_payload(*, selected_models: list[str]) -> dict[str, object]:
 
 
 def test_health() -> None:
+    """Verify that GET /health returns status ok."""
     response = client.get("/health")
 
     assert response.status_code == 200
@@ -76,6 +86,7 @@ def test_health() -> None:
 
 
 def test_upload_route() -> None:
+    """Verify that POST /api/upload parses a valid CSV and returns the requirement row."""
     csv_bytes = (
         b"id,text,domain,type,project\n" b"REQ-1,The system shall respond quickly,Auth,NFR,Portal\n"
     )
@@ -98,12 +109,14 @@ def test_upload_route() -> None:
 
 
 def test_unknown_status_route() -> None:
+    """Verify that GET /api/status with an unknown run ID returns 404."""
     response = client.get("/api/status/run_missing")
 
     assert response.status_code == 404
 
 
 def test_start_analysis_creates_run(monkeypatch: MonkeyPatch) -> None:
+    """Verify that POST /api/analyse returns 201 and a Location header for a valid request."""
     monkeypatch.setattr(
         analysis_router,
         "get_settings",
@@ -124,6 +137,7 @@ def test_start_analysis_creates_run(monkeypatch: MonkeyPatch) -> None:
 def test_start_analysis_returns_503_when_provider_key_is_missing(
     monkeypatch: MonkeyPatch,
 ) -> None:
+    """Verify that POST /api/analyse returns 503 when a selected provider has no API key."""
     monkeypatch.setattr(
         analysis_router,
         "get_settings",

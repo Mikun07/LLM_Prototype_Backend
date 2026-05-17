@@ -6,6 +6,10 @@ from dataclasses import dataclass
 
 from app.models import RequirementRow
 
+#: Prompt schema version embedded in every PromptMessages instance.
+#: Increment when the system or user prompt wording changes in a way that
+#: could alter LLM output, so logged responses can be traced back to the
+#: exact prompt that produced them.
 PROMPT_VERSION = "2.1"
 
 AMBIGUITY_SYSTEM_MESSAGE = """
@@ -77,12 +81,15 @@ Do not include markdown, explanations outside JSON, or extra text.
 
 @dataclass(frozen=True)
 class PromptMessages:
+    """System and user prompt messages sent to an LLM provider."""
+
     system: str
     user: str
     version: str = PROMPT_VERSION
 
 
 def sanitise_requirement_text(value: str) -> str:
+    """Remove control characters and collapse whitespace in a requirement text string."""
     without_control_chars = re.sub(
         r"[\x00-\x08\x0b\x0c\x0e-\x1f]",
         " ",
@@ -93,6 +100,7 @@ def sanitise_requirement_text(value: str) -> str:
 
 
 def build_ambiguity_prompt(requirement: RequirementRow) -> PromptMessages:
+    """Build a system+user prompt pair for single-requirement ambiguity analysis."""
     requirement_text = json.dumps(
         sanitise_requirement_text(requirement.text),
         ensure_ascii=False,
@@ -149,6 +157,7 @@ def build_inconsistency_prompt(
     project_name: str,
     requirements: list[RequirementRow],
 ) -> PromptMessages:
+    """Build a system+user prompt pair for multi-requirement inconsistency analysis."""
     payload = [
         {
             "id": requirement.id,

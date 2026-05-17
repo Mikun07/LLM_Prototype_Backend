@@ -12,6 +12,8 @@ AmbiguityDecisionLabel = Literal["ambiguous", "not_ambiguous", "parse_error"]
 
 
 class ParsedAmbiguity(BaseModel):
+    """Parsed ambiguity decision from an LLM response."""
+
     label: AmbiguityDecisionLabel
     confidence: ConfidenceLevel
     explanation: str
@@ -19,6 +21,8 @@ class ParsedAmbiguity(BaseModel):
 
 
 class ParsedInconsistencyPair(BaseModel):
+    """Parsed inconsistency decision for one requirement pair."""
+
     req_a_id: str
     req_b_id: str
     label: Literal["inconsistent", "consistent", "parse_error"]
@@ -28,11 +32,14 @@ class ParsedInconsistencyPair(BaseModel):
 
 
 class ParsedInconsistency(BaseModel):
+    """Parsed inconsistency response for a requirement group."""
+
     inconsistencies_found: bool
     pairs: list[ParsedInconsistencyPair]
 
 
 def normalise_confidence(value: object) -> ConfidenceLevel:
+    """Coerce an arbitrary confidence value to HIGH, MEDIUM, or LOW (defaulting to LOW)."""
     text = str(value or "low").strip().upper()
     if text in {"HIGH", "MEDIUM", "LOW"}:
         return text  # type: ignore[return-value]
@@ -41,6 +48,7 @@ def normalise_confidence(value: object) -> ConfidenceLevel:
 
 
 def extract_json(raw: str) -> object:
+    """Parse JSON from a raw string, falling back to regex extraction if needed."""
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
@@ -52,6 +60,7 @@ def extract_json(raw: str) -> object:
 
 
 def parse_yes_no(value: str) -> bool | None:
+    """Return True, False, or None for ambiguous/yes/no variants of a label string."""
     lowered = value.strip().lower()
     if lowered in {"yes", "y", "true", "ambiguous", "inconsistent"}:
         return True
@@ -62,6 +71,7 @@ def parse_yes_no(value: str) -> bool | None:
 
 
 def parse_ambiguity_response(raw: str) -> ParsedAmbiguity:
+    """Parse a raw LLM ambiguity response into a ParsedAmbiguity, falling back gracefully."""
     try:
         parsed = extract_json(raw)
         if not isinstance(parsed, dict):
@@ -107,6 +117,7 @@ def parse_ambiguity_response(raw: str) -> ParsedAmbiguity:
 
 
 def parse_inconsistency_response(raw: str) -> ParsedInconsistency:
+    """Parse a raw LLM inconsistency response into a ParsedInconsistency, falling back gracefully."""
     try:
         parsed = extract_json(raw)
         if not isinstance(parsed, dict):

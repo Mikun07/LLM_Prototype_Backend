@@ -4,6 +4,7 @@ from app.services.response_parser import parse_ambiguity_response, parse_inconsi
 
 
 def test_parse_ambiguity_json_response() -> None:
+    """Verify that a well-formed JSON ambiguity response is parsed correctly."""
     raw_response = (
         '{"label":"ambiguous","confidence":"high","explanation":"Vague term.",'
         '"suggestion":"Be specific."}'
@@ -18,6 +19,7 @@ def test_parse_ambiguity_json_response() -> None:
 
 
 def test_parse_ambiguity_legacy_response() -> None:
+    """Verify that a legacy yes/no ambiguity response is parsed via the regex fallback."""
     parsed = parse_ambiguity_response("Ambiguous: No\nExplanation: Clear enough")
 
     assert parsed.label == "not_ambiguous"
@@ -25,6 +27,7 @@ def test_parse_ambiguity_legacy_response() -> None:
 
 
 def test_parse_inconsistency_json_response() -> None:
+    """Verify that a well-formed JSON inconsistency response is parsed correctly."""
     parsed = parse_inconsistency_response(
         '{"inconsistencies_found":true,"pairs":[{"req_a_id":"REQ-1","req_b_id":"REQ-2",'
         '"label":"inconsistent","confidence":"medium","explanation":"Conflict."}]}',

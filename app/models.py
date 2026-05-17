@@ -21,24 +21,32 @@ PipelineKey = Literal[
 
 
 def default_models() -> list[ModelName]:
+    """Return the default list of model names used when none are specified."""
     return ["claude", "chatgpt"]
 
 
 def default_smell_types() -> list[SmellType]:
+    """Return the default list of smell types used when none are specified."""
     return ["ambiguity", "inconsistency"]
 
 
 class ApiModel(BaseModel):
+    """Base API model that rejects unexpected fields."""
+
     model_config = ConfigDict(extra="forbid")
 
 
 class FileMetadata(ApiModel):
+    """Metadata describing an uploaded requirements file."""
+
     name: str
     size: int
     rowCount: int
 
 
 class ColumnDetection(ApiModel):
+    """Column detection result for an uploaded CSV file."""
+
     id: bool
     text: bool
     domain: bool
@@ -47,6 +55,8 @@ class ColumnDetection(ApiModel):
 
 
 class RequirementRow(ApiModel):
+    """Single requirement row parsed from an uploaded file."""
+
     id: str
     text: str
     domain: str = "General"
@@ -55,6 +65,8 @@ class RequirementRow(ApiModel):
 
 
 class UploadResponse(ApiModel):
+    """Response returned after a successful CSV upload."""
+
     file: FileMetadata
     requirements: list[RequirementRow]
     detectedColumns: list[str]
@@ -62,6 +74,8 @@ class UploadResponse(ApiModel):
 
 
 class RunConfig(ApiModel):
+    """Configuration values used to start an analysis run."""
+
     temperature: float = Field(default=0.1, ge=0.0, le=1.0)
     maxGroupSize: int = Field(default=20, ge=2, le=200)
     selectedModels: list[ModelName] = Field(default_factory=default_models)
@@ -69,17 +83,23 @@ class RunConfig(ApiModel):
 
 
 class AnalyseRequest(ApiModel):
+    """Request body for starting an analysis run."""
+
     requirements: list[RequirementRow]
     config: RunConfig = Field(default_factory=RunConfig)
     fileName: str = "uploaded-requirements.csv"
 
 
 class StartRunResponse(ApiModel):
+    """Response returned when an analysis run is created."""
+
     runId: str
     status: RunStatus
 
 
 class PipelineProgress(ApiModel):
+    """Progress state for one model and smell-type pipeline."""
+
     percentage: int
     processed: int
     total: int
@@ -88,6 +108,8 @@ class PipelineProgress(ApiModel):
 
 
 class BreakdownValue(ApiModel):
+    """Aggregated clean and smell counts for one report group."""
+
     name: str
     total: int
     smells: int
@@ -96,6 +118,8 @@ class BreakdownValue(ApiModel):
 
 
 class ReportStats(ApiModel):
+    """Aggregate statistics included in each model report."""
+
     total: int
     smells: int
     clean: int
@@ -106,6 +130,8 @@ class ReportStats(ApiModel):
 
 
 class AmbiguityResult(ApiModel):
+    """Analysis result for one ambiguity check."""
+
     id: str
     text: str
     domain: str
@@ -117,6 +143,8 @@ class AmbiguityResult(ApiModel):
 
 
 class InconsistencyResult(ApiModel):
+    """Analysis result for one inconsistency pair check."""
+
     reqAId: str
     reqBId: str
     reqAText: str
@@ -130,6 +158,8 @@ class InconsistencyResult(ApiModel):
 
 
 class ModelReport(ApiModel):
+    """Complete smell-analysis report for one model."""
+
     model: ModelName
     generatedAt: str
     fileName: str
@@ -139,6 +169,8 @@ class ModelReport(ApiModel):
 
 
 class ComparisonStats(ApiModel):
+    """Aggregate agreement statistics across model reports."""
+
     fullAgreement: int
     claudeOnly: int
     chatgptOnly: int
@@ -149,6 +181,8 @@ class ComparisonStats(ApiModel):
 
 
 class ComparisonRow(ApiModel):
+    """Side-by-side model labels for one compared requirement."""
+
     id: str
     text: str
     domain: str
@@ -162,6 +196,8 @@ class ComparisonRow(ApiModel):
 
 
 class ComparisonReport(ApiModel):
+    """Complete comparison report for Claude and ChatGPT."""
+
     generatedAt: str
     fileName: str
     stats: ComparisonStats
@@ -169,6 +205,8 @@ class ComparisonReport(ApiModel):
 
 
 class RunStatusResponse(ApiModel):
+    """Stored and returned state for an analysis run."""
+
     runId: str
     status: RunStatus
     progress: dict[PipelineKey, PipelineProgress]
@@ -186,6 +224,7 @@ PIPELINE_KEYS: tuple[PipelineKey, ...] = (
 
 
 def pipeline_key(model: ModelName, smell_type: SmellType) -> PipelineKey:
+    """Map a model and smell type to the corresponding pipeline key."""
     if model == "claude" and smell_type == "ambiguity":
         return "claudeAmbiguity"
     if model == "claude" and smell_type == "inconsistency":

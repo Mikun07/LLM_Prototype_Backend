@@ -12,4 +12,5 @@ router = APIRouter(prefix="/upload", tags=["upload"])
 
 @router.post("", response_model=UploadResponse)
 async def upload_csv(file: Annotated[UploadFile, File(...)]) -> UploadResponse:
+    """Accept a CSV upload, parse it, and return requirements with column metadata."""
     return await parse_upload(file)

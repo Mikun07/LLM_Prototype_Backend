@@ -19,10 +19,12 @@ from app.models import (
 
 
 def percentage(part: int, total: int) -> float:
+    """Return part/total as a rounded percentage, or 0 when total is zero."""
     return 0 if total == 0 else round((part / total) * 100, 1)
 
 
 def build_breakdowns(rows: list[tuple[str, SmellLabel]]) -> list[BreakdownValue]:
+    """Aggregate (name, label) pairs into sorted BreakdownValue counts."""
     grouped: dict[str, dict[str, int]] = defaultdict(lambda: {"total": 0, "smells": 0})
     for name, label in rows:
         grouped[name]["total"] += 1
@@ -44,6 +46,7 @@ def build_stats(
     ambiguity_results: list[AmbiguityResult],
     inconsistency_results: list[InconsistencyResult],
 ) -> ReportStats:
+    """Compute aggregate smell statistics from ambiguity and inconsistency results."""
     smell_rows: list[tuple[str, str, str, SmellLabel]] = [
         ("Ambiguity", row.domain, row.type, row.label) for row in ambiguity_results
     ]
@@ -70,6 +73,7 @@ def build_model_report(
     ambiguity_results: list[AmbiguityResult],
     inconsistency_results: list[InconsistencyResult],
 ) -> ModelReport:
+    """Assemble a complete ModelReport from analysis results for one model."""
     return ModelReport(
         model=model,
         generatedAt=datetime.now(UTC).isoformat(),
@@ -152,6 +156,7 @@ def build_comparison_report(
     claude_report: ModelReport,
     chatgpt_report: ModelReport,
 ) -> ComparisonReport:
+    """Build a side-by-side ComparisonReport from Claude and ChatGPT model reports."""
     rows = [
         *_ambiguity_comparison_rows(claude_report, chatgpt_report),
         *_inconsistency_comparison_rows(claude_report, chatgpt_report),

@@ -46,6 +46,8 @@ def _env_list(name: str, default: list[str]) -> list[str]:
 
 @dataclass(frozen=True)
 class Settings:
+    """Runtime configuration loaded from environment variables."""
+
     use_real_llm: bool
     anthropic_api_key: str | None
     openai_api_key: str | None
@@ -66,6 +68,7 @@ class Settings:
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    """Load and cache runtime settings from environment variables."""
     return Settings(
         use_real_llm=_env_bool("USE_REAL_LLM", False),
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,

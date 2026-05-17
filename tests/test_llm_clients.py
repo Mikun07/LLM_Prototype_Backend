@@ -7,6 +7,8 @@ from app.services.prompt_service import PromptMessages
 
 
 class OpenAiQuotaError(Exception):
+    """Fake OpenAI quota error used by retry tests."""
+
     status_code = 429
     body = {
         "error": {
@@ -17,6 +19,8 @@ class OpenAiQuotaError(Exception):
 
 
 class AnthropicCreditError(Exception):
+    """Fake Anthropic billing error used by retry tests."""
+
     status_code = 400
     body = {
         "error": {
@@ -30,6 +34,7 @@ class AnthropicCreditError(Exception):
 
 
 def settings_for_test() -> Settings:
+    """Return a Settings object suitable for unit tests with real-LLM mode enabled."""
     return Settings(
         use_real_llm=True,
         anthropic_api_key="anthropic-test",
@@ -51,26 +56,33 @@ def settings_for_test() -> Settings:
 
 
 class QuotaFailingClient(LlmClient):
+    """LLM client that always raises the fake OpenAI quota error."""
+
     def __init__(self) -> None:
         super().__init__(settings_for_test())
         self.calls = 0
 
     async def complete(self, model: ModelName, prompt: PromptMessages) -> str:
+        """Always raise OpenAiQuotaError and count the attempt."""
         self.calls += 1
         raise OpenAiQuotaError()
 
 
 class AnthropicCreditFailingClient(LlmClient):
+    """LLM client that always raises the fake Anthropic billing error."""
+
     def __init__(self) -> None:
         super().__init__(settings_for_test())
         self.calls = 0
 
     async def complete(self, model: ModelName, prompt: PromptMessages) -> str:
+        """Always raise AnthropicCreditError and count the attempt."""
         self.calls += 1
         raise AnthropicCreditError()
 
 
 async def test_openai_insufficient_quota_is_not_retried() -> None:
+    """Verify that an OpenAI quota error raises immediately without retrying."""
     client = QuotaFailingClient()
 
     try:
@@ -88,6 +100,7 @@ async def test_openai_insufficient_quota_is_not_retried() -> None:
 
 
 async def test_anthropic_low_credit_error_is_short_and_not_retried() -> None:
+    """Verify that an Anthropic billing error raises a short message without retrying."""
     client = AnthropicCreditFailingClient()
 
     try:

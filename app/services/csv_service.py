@@ -28,16 +28,19 @@ COLUMN_ALIASES: dict[ColumnKey, tuple[str, ...]] = {
 
 
 def normalise_header(value: str) -> str:
+    """Strip, lowercase, and collapse whitespace in a CSV header for alias matching."""
     cleaned = value.strip().lower().replace("_", " ")
     return re.sub(r"\s+", " ", cleaned)
 
 
 def find_column(headers: Iterable[str], key: ColumnKey) -> str | None:
+    """Return the first header that matches a known alias for the given column key."""
     aliases = COLUMN_ALIASES[key]
     return next((header for header in headers if normalise_header(header) in aliases), None)
 
 
 def detect_columns(headers: Sequence[str]) -> ColumnDetection:
+    """Detect which standard columns are present in the CSV header row."""
     return ColumnDetection(
         id=find_column(headers, "id") is not None,
         text=find_column(headers, "text") is not None,
@@ -48,6 +51,7 @@ def detect_columns(headers: Sequence[str]) -> ColumnDetection:
 
 
 def read_value(row: dict[str, str | None], column: str | None) -> str:
+    """Read a cell value from a CSV row by column name, returning an empty string if absent."""
     if column is None:
         return ""
 
@@ -55,6 +59,7 @@ def read_value(row: dict[str, str | None], column: str | None) -> str:
 
 
 def normalise_requirement_type(value: str) -> str:
+    """Normalise a raw type string to FR, NFR, or its original value (defaulting to UNKNOWN)."""
     upper = value.strip().upper()
     if upper in {"FR", "FUNCTIONAL"}:
         return "FR"
@@ -65,6 +70,7 @@ def normalise_requirement_type(value: str) -> str:
 
 
 def has_csv_shape(file: UploadFile) -> bool:
+    """Return True if the uploaded file has a CSV extension or MIME type."""
     filename = (file.filename or "").lower()
     content_type = (file.content_type or "").lower()
     return (
@@ -75,6 +81,7 @@ def has_csv_shape(file: UploadFile) -> bool:
 
 
 def parse_csv_text(text: str, file_name: str, file_size: int) -> UploadResponse:
+    """Parse CSV text into an UploadResponse, raising HTTP 422 for invalid content."""
     reader = csv.DictReader(StringIO(text))
     headers = reader.fieldnames or []
     detection = detect_columns(headers)
@@ -129,6 +136,7 @@ def parse_csv_text(text: str, file_name: str, file_size: int) -> UploadResponse:
 
 
 async def parse_upload(file: UploadFile, settings: Settings | None = None) -> UploadResponse:
+    """Validate and parse an uploaded CSV file, enforcing size and encoding constraints."""
     active_settings = settings or get_settings()
     if not has_csv_shape(file):
         raise HTTPException(

@@ -14,6 +14,8 @@ INCONSISTENCY_SIGNALS = ("must not", "shall not", "never", "without authenticati
 
 
 class ProviderRequestError(RuntimeError):
+    """Normalised provider error with retry and status metadata."""
+
     def __init__(
         self,
         message: str,
@@ -31,24 +33,29 @@ class ProviderRequestError(RuntimeError):
 
 
 def provider_name(model: ModelName) -> str:
+    """Return the provider organisation name for a given model."""
     return "OpenAI" if model == "chatgpt" else "Anthropic"
 
 
 def user_model_name(model: ModelName) -> str:
+    """Return the display name shown to users for a given model."""
     return "ChatGPT" if model == "chatgpt" else "Claude"
 
 
 def extract_status_code(exc: Exception) -> int | None:
+    """Extract an HTTP status code from a provider SDK exception, if present."""
     value = getattr(exc, "status_code", None)
     return value if isinstance(value, int) else None
 
 
 def extract_error_body(exc: Exception) -> dict[str, object]:
+    """Extract the response body dict from a provider SDK exception, if present."""
     body = getattr(exc, "body", None)
     return body if isinstance(body, dict) else {}
 
 
 def extract_error_code(exc: Exception) -> str | None:
+    """Extract a machine-readable error code from a provider SDK exception body."""
     body = extract_error_body(exc)
     nested_error = body.get("error")
     if isinstance(nested_error, dict):
@@ -61,6 +68,7 @@ def extract_error_code(exc: Exception) -> str | None:
 
 
 def extract_error_message(exc: Exception) -> str:
+    """Extract a human-readable error message from a provider SDK exception."""
     body = extract_error_body(exc)
     nested_error = body.get("error")
     if isinstance(nested_error, dict):
@@ -72,6 +80,7 @@ def extract_error_message(exc: Exception) -> str:
 
 
 def normalise_provider_error(model: ModelName, exc: Exception) -> ProviderRequestError:
+    """Map a raw SDK exception to a typed ProviderRequestError with retry and billing metadata."""
     provider = provider_name(model)
     model_label = user_model_name(model)
     status_code = extract_status_code(exc)
@@ -156,10 +165,13 @@ def _mock_inconsistency_response(prompt: PromptMessages) -> str:
 
 
 class LlmClient:
+    """Client wrapper for mock, OpenAI, and Anthropic completions."""
+
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
 
     async def complete(self, model: ModelName, prompt: PromptMessages) -> str:
+        """Dispatch a single completion request to the mock, OpenAI, or Anthropic backend."""
         if not self._settings.use_real_llm:
             if "inconsistencies_found" in prompt.user:
                 return _mock_inconsistency_response(prompt)
@@ -212,6 +224,7 @@ class LlmClient:
         return "\n".join(text_blocks)
 
     async def complete_with_retries(self, model: ModelName, prompt: PromptMessages) -> str:
+        """Attempt a completion up to max_retries times with exponential back-off."""
         last_error: Exception | None = None
         for attempt in range(self._settings.llm_max_retries):
             try:
@@ -220,7 +233,7 @@ class LlmClient:
                 last_error = exc
                 if not exc.retryable:
                     raise
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 provider_error = normalise_provider_error(model, exc)
                 last_error = provider_error
                 if not provider_error.retryable:
