@@ -16,6 +16,7 @@ def test_ambiguity_prompt_requests_json() -> None:
 
 def test_inconsistency_prompt_includes_no_result_shape() -> None:
     prompt = build_inconsistency_prompt(
+        "Authentication Project",
         [
             RequirementRow(id="REQ-1", text="The system shall require authentication."),
             RequirementRow(
@@ -28,3 +29,4 @@ def test_inconsistency_prompt_includes_no_result_shape() -> None:
     assert '"inconsistencies_found": false' in prompt.user
     assert '"pairs": []' in prompt.user
     assert "REQ-1" in prompt.user
+    assert "Authentication Project" in prompt.user

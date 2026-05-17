@@ -63,11 +63,12 @@ Do not report:
 - differences in wording
 - abstraction level differences
 - incompleteness
-- implementation assumptionsnas inconsistencies.
+- implementation assumptions as inconsistencies.
 
 Identify all reasonable logical contradictions and conflicting behaviours.
 
-If a contradiction is weak but still reasonably plausible, report it with LOW confidence instead of ignoring it.
+If a contradiction is weak but still reasonably plausible,
+report it with LOW confidence instead of ignoring it.
 
 You must respond with valid JSON only.
 Do not include markdown, explanations outside JSON, or extra text.
