@@ -31,7 +31,7 @@ async def start_analysis(payload: AnalyseRequest, response: Response) -> StartRu
     """Validate the analysis request and start a background pipeline run."""
     if not payload.requirements:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="At least one requirement is needed to start analysis.",
         )
 

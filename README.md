@@ -33,8 +33,13 @@ The API response shapes are designed to match the current React frontend contrac
 
 | Document | Purpose |
 |---|---|
+| [Architecture](docs/ARCHITECTURE.md) | Component structure, request flow, design decisions |
 | [Command Reference](docs/COMMANDS.md) | Setup, run, test, and version commands |
 | [Versioning Guide](docs/VERSIONING.md) | Backend version policy and release workflow |
+| [Requirements](docs/REQUIREMENTS.md) | Problem statement, user stories, functional and non-functional requirements, traceability |
+| [Risk Assessment](docs/RISK_ASSESSMENT.md) | Technical, security, operational, and project risks with mitigations |
+| [Security](docs/SECURITY.md) | Threat model, asset identification, attack surface, secure coding requirements |
+| [DevOps](docs/DEVOPS.md) | Environment strategy, build pipeline, configuration, logging, incident management |
 | [Version Index](docs/versions/index.md) | List of released backend versions |
 | [v1.0.0 Baseline](docs/versions/v1/v1.0.0.md) | Current backend baseline document |
 
@@ -68,18 +73,23 @@ The frontend Vite proxy already targets `http://localhost:8000`.
 
 ## Environment
 
-Important variables in `.env`:
+All configuration is loaded from `.env` (copy `.env.example` to get started):
 
-```text
-USE_REAL_LLM=false
-ANTHROPIC_API_KEY=
-OPENAI_API_KEY=
-CLAUDE_MODEL=claude-sonnet-4-20250514
-OPENAI_MODEL=gpt-4o
-LLM_TEMPERATURE=0.1
-INCONSISTENCY_MAX_GROUP_SIZE=20
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-```
+| Variable | Default | Purpose |
+|---|---|---|
+| `USE_REAL_LLM` | `false` | `true` makes live provider calls; `false` uses deterministic mock |
+| `ANTHROPIC_API_KEY` | _(empty)_ | Required when Claude is selected and `USE_REAL_LLM=true` |
+| `OPENAI_API_KEY` | _(empty)_ | Required when ChatGPT is selected and `USE_REAL_LLM=true` |
+| `CLAUDE_MODEL` | `claude-sonnet-4-20250514` | Anthropic model identifier |
+| `OPENAI_MODEL` | `gpt-4o` | OpenAI model identifier |
+| `LLM_TEMPERATURE` | `0.1` | Sampling temperature (0.0 – 1.0) |
+| `LLM_MAX_TOKENS` | `2048` | Max tokens per LLM response |
+| `LLM_MAX_RETRIES` | `3` | Retry attempts on transient provider errors |
+| `INCONSISTENCY_MAX_GROUP_SIZE` | `20` | Max requirements per inconsistency group |
+| `MAX_CSV_SIZE_MB` | `10` | Upload size limit |
+| `LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `LOG_RAW_LLM_RESPONSES` | `true` | Emit raw provider responses at `DEBUG` level |
+| `CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated allowed origins |
 
 ## Project Structure
 
@@ -117,9 +127,19 @@ python -m pytest
 python -m compileall app tests
 ```
 
+## Structured Logging
+
+The backend emits structured log lines at two levels:
+
+| Event | Level | When |
+|---|---|---|
+| Raw LLM response | `DEBUG` | Every provider response when `LOG_RAW_LLM_RESPONSES=true` |
+| Parse error | `WARNING` | When a provider response cannot be parsed into the expected JSON shape |
+
+Set `LOG_LEVEL=DEBUG` in `.env` to see raw response bodies. The default `LOG_LEVEL=INFO` suppresses debug output.
+
 ## Notes
 
 - Run state is stored in memory only. Restarting the backend clears all runs.
-- Raw LLM logging paths are reserved in configuration but not yet persisted to disk.
 - The mock LLM path is intentionally deterministic for frontend/backend integration work.
 - The live LLM path imports `anthropic` and `openai` only when `USE_REAL_LLM=true`.

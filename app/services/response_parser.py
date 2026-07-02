@@ -8,9 +8,22 @@ from typing import Literal
 
 from pydantic import BaseModel, ValidationError
 
-from app.models import ConfidenceLevel
+from app.models import AmbiguityType, ConfidenceLevel
 
 AmbiguityDecisionLabel = Literal["ambiguous", "not_ambiguous", "parse_error"]
+
+VALID_AMBIGUITY_TYPES: frozenset[str] = frozenset(
+    {"lexical", "syntactic", "referential", "semantic", "none"}
+)
+
+
+def normalise_ambiguity_type(value: object) -> AmbiguityType:
+    """Coerce an arbitrary ambiguity_type value to a valid AmbiguityType (defaulting to none)."""
+    text = str(value or "none").strip().lower()
+    if text in VALID_AMBIGUITY_TYPES:
+        return text  # type: ignore[return-value]
+
+    return "none"
 
 
 class ParsedAmbiguity(BaseModel):
@@ -18,6 +31,7 @@ class ParsedAmbiguity(BaseModel):
 
     label: AmbiguityDecisionLabel
     confidence: ConfidenceLevel
+    ambiguity_type: AmbiguityType = "none"
     explanation: str
     suggestion: str = ""
 
@@ -87,6 +101,7 @@ def parse_ambiguity_response(raw: str) -> ParsedAmbiguity:
         return ParsedAmbiguity(
             label=label,  # type: ignore[arg-type]
             confidence=normalise_confidence(parsed.get("confidence")),
+            ambiguity_type=normalise_ambiguity_type(parsed.get("ambiguity_type")),
             explanation=str(parsed.get("explanation") or "No explanation supplied."),
             suggestion=str(parsed.get("suggestion") or ""),
         )
@@ -102,6 +117,7 @@ def parse_ambiguity_response(raw: str) -> ParsedAmbiguity:
             return ParsedAmbiguity(
                 label="ambiguous" if is_ambiguous else "not_ambiguous",
                 confidence="LOW",
+                ambiguity_type="none",
                 explanation=(
                     explanation_match.group(1).strip()
                     if explanation_match is not None
@@ -113,6 +129,7 @@ def parse_ambiguity_response(raw: str) -> ParsedAmbiguity:
         return ParsedAmbiguity(
             label="parse_error",
             confidence="LOW",
+            ambiguity_type="none",
             explanation=f"Unable to parse LLM response: {raw}",
             suggestion="Review the raw response and rerun this requirement.",
         )

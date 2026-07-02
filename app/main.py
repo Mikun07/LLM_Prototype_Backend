@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,6 +12,11 @@ from app.routers.analysis import router as analysis_router
 from app.routers.upload import router as upload_router
 
 settings = get_settings()
+
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
 #: API version exposed in the OpenAPI schema and /docs UI.
 #: Increment the minor version for backwards-compatible additions,

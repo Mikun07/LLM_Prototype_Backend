@@ -11,6 +11,7 @@ SmellType = Literal["ambiguity", "inconsistency"]
 RequirementType = str
 SmellLabel = Literal["SMELL", "CLEAN"]
 ConfidenceLevel = Literal["HIGH", "MEDIUM", "LOW"]
+AmbiguityType = Literal["lexical", "syntactic", "referential", "semantic", "none"]
 AgreementStatus = Literal["AGREE", "DISAGREE"]
 PipelineStatus = Literal["queued", "running", "complete", "error"]
 RunStatus = Literal["running", "complete", "error"]
@@ -140,6 +141,7 @@ class AmbiguityResult(ApiModel):
     type: RequirementType
     label: SmellLabel
     confidence: ConfidenceLevel
+    ambiguityType: AmbiguityType = "none"
     explanation: str
     suggestion: str = ""
 

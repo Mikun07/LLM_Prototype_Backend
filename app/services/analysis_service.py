@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections import defaultdict
 from uuid import uuid4
 
@@ -30,6 +31,8 @@ from app.services.response_parser import (
     parse_ambiguity_response,
     parse_inconsistency_response,
 )
+
+logger = logging.getLogger(__name__)
 
 ALL_MODELS: tuple[ModelName, ...] = ("claude", "chatgpt")
 ALL_SMELL_TYPES: tuple[SmellType, ...] = ("ambiguity", "inconsistency")
@@ -293,10 +296,26 @@ class AnalysisService:  # pylint: disable=too-few-public-methods
         total = len(requirements)
         await self._store.update_progress(run_id, key, progress(0, total, "running"))
         rows: list[AmbiguityResult] = []
+        settings = get_settings()
         for index, requirement in enumerate(requirements, start=1):
             prompt = build_ambiguity_prompt(requirement)
             raw = await self._llm_client.complete_with_retries(model, prompt)
+            if settings.log_raw_llm_responses:
+                logger.debug(
+                    "raw_llm_response run=%s model=%s smell=ambiguity req=%s response=%s",
+                    run_id,
+                    model,
+                    requirement.id,
+                    raw,
+                )
             parsed = parse_ambiguity_response(raw)
+            if parsed.label == "parse_error":
+                logger.warning(
+                    "parse_error run=%s model=%s smell=ambiguity req=%s",
+                    run_id,
+                    model,
+                    requirement.id,
+                )
             rows.append(
                 AmbiguityResult(
                     id=requirement.id,
@@ -305,6 +324,7 @@ class AnalysisService:  # pylint: disable=too-few-public-methods
                     type=requirement.type,
                     label="SMELL" if parsed.label in {"ambiguous", "parse_error"} else "CLEAN",
                     confidence=parsed.confidence,
+                    ambiguityType=parsed.ambiguity_type,
                     explanation=parsed.explanation,
                     suggestion=parsed.suggestion,
                 ),
@@ -325,6 +345,7 @@ class AnalysisService:  # pylint: disable=too-few-public-methods
         groups = group_requirements(requirements, max_group_size)
         requirements_by_id = pair_lookup(requirements)
         total = len(groups)
+        settings = get_settings()
         await self._store.update_progress(run_id, key, progress(0, total, "running"))
         rows: list[InconsistencyResult] = []
 
@@ -337,19 +358,27 @@ class AnalysisService:  # pylint: disable=too-few-public-methods
                 group,
             )
             raw = await self._llm_client.complete_with_retries(model, prompt)
+            if settings.log_raw_llm_responses:
+                logger.debug(
+                    "raw_llm_response run=%s model=%s smell=inconsistency group=%d response=%s",
+                    run_id,
+                    model,
+                    index,
+                    raw,
+                )
             parsed = parse_inconsistency_response(raw)
+            if any(pair.label == "parse_error" for pair in parsed.pairs):
+                logger.warning(
+                    "parse_error run=%s model=%s smell=inconsistency group=%d",
+                    run_id,
+                    model,
+                    index,
+                )
             smell_pairs = [
                 result
                 for pair in parsed.pairs
                 if (result := result_from_parsed_pair(pair, requirements_by_id)) is not None
             ]
-            # if smell_pairs:
-            #    rows.extend(smell_pairs)
-            # else:
-            #    rows.extend(
-            #       clean_pair_result(first, second) for first, second in candidate_pairs(group)
-            #  )
-
             detected_keys = {tuple(sorted([row.reqAId, row.reqBId])) for row in smell_pairs}
             # Add all detected inconsistency rows
             rows.extend(smell_pairs)

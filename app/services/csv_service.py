@@ -91,7 +91,7 @@ def parse_csv_text(text: str, file_name: str, file_size: int) -> UploadResponse:
 
     if not headers or text_column is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "The CSV must include a text, requirement, description, "
                 "or requirement_text column."
@@ -121,7 +121,7 @@ def parse_csv_text(text: str, file_name: str, file_size: int) -> UploadResponse:
 
     if not requirements:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="The CSV has headers but no requirement rows with text.",
         )
 
@@ -142,7 +142,7 @@ async def parse_upload(file: UploadFile, settings: Settings | None = None) -> Up
     active_settings = settings or get_settings()
     if not has_csv_shape(file):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Upload a CSV file with a .csv extension.",
         )
 
@@ -158,7 +158,7 @@ async def parse_upload(file: UploadFile, settings: Settings | None = None) -> Up
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="The selected CSV must be UTF-8 encoded.",
         ) from exc
 

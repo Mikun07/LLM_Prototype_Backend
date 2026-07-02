@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from app.services.response_parser import parse_ambiguity_response, parse_inconsistency_response
+from app.services.response_parser import (
+    normalise_ambiguity_type,
+    parse_ambiguity_response,
+    parse_inconsistency_response,
+)
 
 
 def test_parse_ambiguity_json_response() -> None:
@@ -18,6 +22,33 @@ def test_parse_ambiguity_json_response() -> None:
 
     assert parsed.label == "ambiguous"
     assert parsed.confidence == "HIGH"
+    assert parsed.ambiguity_type == "none"
+
+
+def test_parse_ambiguity_type_captured() -> None:
+    """Verify that ambiguity_type is captured from the LLM response when present."""
+    raw_response = (
+        '{"label":"ambiguous","confidence":"medium","ambiguity_type":"lexical",'
+        '"explanation":"The term has multiple meanings.","suggestion":"Clarify the term."}'
+    )
+
+    parsed = parse_ambiguity_response(raw_response)
+
+    assert parsed.ambiguity_type == "lexical"
+
+
+def test_parse_ambiguity_type_unknown_defaults_to_none() -> None:
+    """Verify that an unrecognised ambiguity_type value defaults to none."""
+    assert normalise_ambiguity_type("structural") == "none"
+    assert normalise_ambiguity_type(None) == "none"
+    assert normalise_ambiguity_type("LEXICAL") == "lexical"
+
+
+def test_parse_ambiguity_legacy_response_defaults_ambiguity_type() -> None:
+    """Verify that the legacy yes/no fallback path sets ambiguity_type to none."""
+    parsed = parse_ambiguity_response("Ambiguous: No\nExplanation: Clear enough")
+
+    assert parsed.ambiguity_type == "none"
 
 
 def test_parse_ambiguity_legacy_response() -> None:
