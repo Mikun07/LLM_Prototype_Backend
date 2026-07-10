@@ -138,7 +138,7 @@ No distributed tracing, metrics collection, or dashboarding is in scope for this
 |---|---|
 | Backend returns 503 for a provider | Check that `USE_REAL_LLM=true` and the correct API key is set in `.env` |
 | Pipeline shows `error` status | Check backend terminal output for ERROR or WARNING log lines |
-| LLM responses all parse as `parse_error` | Check raw responses with `LOG_LEVEL=DEBUG`; check if the provider model ID has changed |
+| LLM responses all parse as `parse_error` | Temporarily set `LOG_LEVEL=DEBUG` and `LOG_RAW_LLM_RESPONSES=true`; check if the provider model ID has changed |
 | CSV upload rejected with 422 | Confirm the CSV has a column containing requirement text; check COMMANDS.md |
 | Results differ significantly between runs | Expected behaviour; LLM outputs are not fully deterministic; document and account for variability in thesis analysis |
 

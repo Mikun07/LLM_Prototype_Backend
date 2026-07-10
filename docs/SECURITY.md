@@ -53,7 +53,7 @@ security are noted but out of scope for this version.
 |---|---|---|
 | API keys exposed in source control | Mitigated | `.env` is in `.gitignore`; `.env.example` contains no real keys |
 | API keys exposed in browser traffic | Mitigated | All provider calls are server-side; the browser never receives keys |
-| API keys exposed in logs | Mitigated | Logging writes raw LLM responses, not environment variables; key fields are not logged |
+| API keys exposed in logs | Mitigated | Raw LLM response logging is disabled by default; environment variables and key fields are not logged |
 | Requirement text exposed to third parties | Accepted | Live mode sends requirement text to Anthropic/OpenAI APIs; researcher must be aware of this when using sensitive requirements |
 
 ### Denial of Service

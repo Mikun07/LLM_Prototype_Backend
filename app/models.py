@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ModelName = Literal["claude", "chatgpt"]
 SmellType = Literal["ambiguity", "inconsistency"]
@@ -83,6 +83,15 @@ class RunConfig(ApiModel):
     maxGroupSize: int = Field(default=20, ge=2, le=200)
     selectedModels: list[ModelName] = Field(default_factory=default_models)
     selectedSmellTypes: list[SmellType] = Field(default_factory=default_smell_types)
+
+    @field_validator("selectedModels", "selectedSmellTypes")
+    @classmethod
+    def require_at_least_one_selection(cls, value: list[str]) -> list[str]:
+        """Require at least one selected model and smell type for a runnable analysis."""
+        if not value:
+            raise ValueError("At least one option must be selected.")
+
+        return value
 
 
 class AnalyseRequest(ApiModel):

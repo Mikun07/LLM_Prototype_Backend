@@ -96,6 +96,8 @@ def parse_ambiguity_response(raw: str) -> ParsedAmbiguity:
         label = str(parsed.get("label", "")).strip().lower()
         if label not in {"ambiguous", "not_ambiguous"}:
             yes_no = parse_yes_no(label)
+            if yes_no is None:
+                raise ValueError("Expected ambiguity label to be ambiguous or not_ambiguous.")
             label = "ambiguous" if yes_no else "not_ambiguous"
 
         return ParsedAmbiguity(

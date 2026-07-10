@@ -89,6 +89,6 @@ def get_settings() -> Settings:
             ["http://localhost:5173", "http://127.0.0.1:5173"],
         ),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
-        log_raw_llm_responses=_env_bool("LOG_RAW_LLM_RESPONSES", True),
+        log_raw_llm_responses=_env_bool("LOG_RAW_LLM_RESPONSES", False),
         log_dir=os.getenv("LOG_DIR", "logs"),
     )

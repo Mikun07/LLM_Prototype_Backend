@@ -6,6 +6,13 @@ This backend is the intended service version of the earlier
 `genai-requirements-smells` experiment. The script pipeline has been reorganised into
 API routes, Pydantic models, services, an in-memory run store, and testable parsing logic.
 
+## Related Repositories
+
+| Repository | Purpose |
+|---|---|
+| [ReqSmell Frontend](https://github.com/Mikun07/LLM_Prototype_Frontend) | React client for upload, configuration, progress polling, and report review |
+| [ReqSmell Backend](https://github.com/Mikun07/LLM_Prototype_Backend) | This FastAPI API |
+
 ## What It Provides
 
 | Endpoint | Purpose |
@@ -88,7 +95,7 @@ All configuration is loaded from `.env` (copy `.env.example` to get started):
 | `INCONSISTENCY_MAX_GROUP_SIZE` | `20` | Max requirements per inconsistency group |
 | `MAX_CSV_SIZE_MB` | `10` | Upload size limit |
 | `LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `LOG_RAW_LLM_RESPONSES` | `true` | Emit raw provider responses at `DEBUG` level |
+| `LOG_RAW_LLM_RESPONSES` | `false` | Emit raw provider responses at `DEBUG` level when deliberately enabled |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated allowed origins |
 
 ## Project Structure
@@ -136,10 +143,14 @@ The backend emits structured log lines at two levels:
 | Raw LLM response | `DEBUG` | Every provider response when `LOG_RAW_LLM_RESPONSES=true` |
 | Parse error | `WARNING` | When a provider response cannot be parsed into the expected JSON shape |
 
-Set `LOG_LEVEL=DEBUG` in `.env` to see raw response bodies. The default `LOG_LEVEL=INFO` suppresses debug output.
+Set both `LOG_LEVEL=DEBUG` and `LOG_RAW_LLM_RESPONSES=true` in `.env` to inspect raw response bodies during debugging. Keep raw response logging disabled for normal development because responses may contain requirement text.
 
 ## Notes
 
 - Run state is stored in memory only. Restarting the backend clears all runs.
 - The mock LLM path is intentionally deterministic for frontend/backend integration work.
 - The live LLM path imports `anthropic` and `openai` only when `USE_REAL_LLM=true`.
+
+## License
+
+This project uses the MIT License. See [LICENSE](LICENSE).

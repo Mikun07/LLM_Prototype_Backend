@@ -22,6 +22,33 @@ def test_parse_csv_text_detects_columns_and_rows() -> None:
     assert result.detectedColumns == ["id", "text", "domain", "type", "project"]
 
 
+def test_parse_csv_text_detects_group_id_as_project() -> None:
+    """Verify that group_id style headers map to the project field."""
+    result = parse_csv_text(
+        "id,text,group_id\nREQ-1,The system shall respond quickly,Portal\n",
+        "requirements.csv",
+        64,
+    )
+
+    assert result.detection.project is True
+    assert result.requirements[0].project == "Portal"
+
+
+def test_parse_csv_text_rejects_duplicate_requirement_ids() -> None:
+    """Verify that duplicate requirement IDs are rejected before analysis starts."""
+    try:
+        parse_csv_text(
+            "id,text\nREQ-1,The system shall respond quickly\nREQ-1,The system shall export CSV\n",
+            "requirements.csv",
+            96,
+        )
+    except HTTPException as error:
+        assert error.status_code == 422
+        assert "Duplicate ID(s): REQ-1" in str(error.detail)
+    else:
+        raise AssertionError("Expected HTTPException for duplicate requirement IDs.")
+
+
 def test_parse_csv_text_requires_text_column() -> None:
     """Verify that a CSV missing a text column raises HTTP 422."""
     try:

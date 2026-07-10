@@ -84,7 +84,7 @@ Classification combines the two: Critical / High / Medium / Low.
 | Probability | Low |
 | Impact | Very High |
 | Classification | High |
-| Mitigation | `.env` is in `.gitignore`; `.env.example` contains no real keys; all provider calls are server-side; logging writes raw LLM responses, not key values |
+| Mitigation | `.env` is in `.gitignore`; `.env.example` contains no real keys; all provider calls are server-side; raw LLM response logging is disabled by default |
 | Residual risk | Negligible if the `.gitignore` is respected |
 
 ### RS-002: Malicious CSV Upload

@@ -25,7 +25,7 @@ COLUMN_ALIASES: dict[ColumnKey, tuple[str, ...]] = {
     ),
     "domain": ("domain", "area", "module"),
     "type": ("type", "requirement type", "requirement_type"),
-    "project": ("project", "system", "product", "project name", "project_name", "Group_id"),
+    "project": ("project", "system", "product", "project name", "project id", "group id"),
 }
 
 
@@ -69,6 +69,24 @@ def normalise_requirement_type(value: str) -> str:
         return "NFR"
 
     return value.strip() or "UNKNOWN"
+
+
+def ensure_unique_requirement_ids(requirements: list[RequirementRow]) -> None:
+    """Reject duplicate requirement IDs before they can corrupt pair matching."""
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+
+    for requirement in requirements:
+        if requirement.id in seen:
+            duplicates.add(requirement.id)
+        seen.add(requirement.id)
+
+    if duplicates:
+        duplicate_list = ", ".join(sorted(duplicates))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Requirement IDs must be unique. Duplicate ID(s): {duplicate_list}.",
+        )
 
 
 def has_csv_shape(file: UploadFile) -> bool:
@@ -124,6 +142,8 @@ def parse_csv_text(text: str, file_name: str, file_size: int) -> UploadResponse:
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="The CSV has headers but no requirement rows with text.",
         )
+
+    ensure_unique_requirement_ids(requirements)
 
     detected_columns = [
         key for key, is_present in detection.model_dump().items() if bool(is_present)

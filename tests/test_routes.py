@@ -159,3 +159,13 @@ def test_start_analysis_returns_503_when_provider_key_is_missing(
     assert detail["providers"] == ["Claude"]
     assert "API_KEY" not in str(detail)
     assert "configured" not in str(detail).lower()
+
+
+def test_start_analysis_rejects_empty_model_selection() -> None:
+    """Verify that the backend refuses analysis requests with no selected model."""
+    response = client.post(
+        "/api/analyse",
+        json=analyse_payload(selected_models=[]),
+    )
+
+    assert response.status_code == 422

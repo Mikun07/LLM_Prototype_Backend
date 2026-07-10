@@ -59,6 +59,17 @@ def test_parse_ambiguity_legacy_response() -> None:
     assert parsed.explanation == "Clear enough"
 
 
+def test_parse_ambiguity_unknown_label_returns_parse_error() -> None:
+    """Verify that unknown labels are surfaced instead of silently becoming clean."""
+    parsed = parse_ambiguity_response(
+        '{"label":"uncertain","confidence":"medium","explanation":"Cannot decide."}',
+    )
+
+    assert parsed.label == "parse_error"
+    assert parsed.confidence == "LOW"
+    assert "Unable to parse LLM response" in parsed.explanation
+
+
 def test_parse_inconsistency_json_response() -> None:
     """Verify that a well-formed JSON inconsistency response is parsed correctly."""
     parsed = parse_inconsistency_response(
